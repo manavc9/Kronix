@@ -1,0 +1,715 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — Car Tracking{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── LOCATION TABS ── */
+.loc-tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+.loc-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-decoration: none;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+.loc-tab:hover  { color: var(--text); border-color: var(--accent); }
+.loc-tab.active { color: var(--accent); border-color: var(--accent); background: rgba(0,212,255,0.07); }
+
+/* ── ACTION QUEUE ── */
+.aq-section { margin-bottom: 24px; }
+.aq-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.aq-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.aq-subtitle { font-size: 11px; color: var(--text-4); margin-left: 4px; }
+.aq-total-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+.aq-total-badge.has-items { background: rgba(255,82,82,0.15); color: var(--red); }
+.aq-total-badge.all-clear { background: rgba(0,230,118,0.1); color: var(--green); }
+
+.aq-all-clear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--green);
+  font-size: 13px;
+}
+
+.aq-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 0;
+}
+.aq-bucket {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.aq-head {
+  background: var(--surface);
+  padding: 12px 14px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.15s;
+  user-select: none;
+  position: relative;
+}
+.aq-head:hover { background: var(--surface-2); }
+.aq-head.open   { background: var(--surface-2); }
+.aq-head.color-blue   { border-left-color: var(--accent); }
+.aq-head.color-yellow { border-left-color: var(--yellow); }
+.aq-head.color-orange { border-left-color: var(--orange); }
+.aq-head.color-teal   { border-left-color: #1de9b6; }
+.aq-head.color-green  { border-left-color: var(--green); }
+.aq-head.color-purple { border-left-color: var(--purple); }
+
+.aq-head-icon { font-size: 16px; margin-bottom: 6px; line-height: 1; }
+.aq-head-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.aq-head-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.aq-head.color-blue   .aq-head-count { color: var(--accent); }
+.aq-head.color-yellow .aq-head-count { color: var(--yellow); }
+.aq-head.color-orange .aq-head-count { color: var(--orange); }
+.aq-head.color-teal   .aq-head-count { color: #1de9b6; }
+.aq-head.color-green  .aq-head-count { color: var(--green); }
+.aq-head.color-purple .aq-head-count { color: var(--purple); }
+.aq-head.empty .aq-head-count { color: var(--text-4); }
+.aq-head.empty .aq-head-label { color: var(--text-4); }
+.aq-head.empty { border-left-color: var(--border); opacity: 0.6; cursor: default; }
+
+.aq-caret {
+  position: absolute;
+  top: 10px; right: 10px;
+  font-size: 10px;
+  color: var(--text-4);
+  transition: transform 0.2s;
+}
+.aq-head.open .aq-caret { transform: rotate(180deg); }
+
+/* Expanded panel sits below all bucket cards */
+.aq-panel {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 8px;
+  overflow: hidden;
+}
+.aq-panel.open { display: block; }
+.aq-panel-title {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.aq-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border-sub);
+  font-size: 11px;
+}
+.aq-row:last-child { border-bottom: none; }
+.aq-car-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 110px;
+  text-decoration: none;
+}
+.aq-car-id:hover { text-decoration: underline; }
+.aq-customer { color: var(--text-2); flex: 1; min-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aq-days {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.aq-days.d-ok   { background: rgba(0,230,118,0.1);  color: var(--green); }
+.aq-days.d-warn { background: rgba(255,215,64,0.1);  color: var(--yellow); }
+.aq-days.d-hot  { background: rgba(255,82,82,0.1);   color: var(--red); }
+.aq-stamp-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  color: var(--text-2);
+  font-size: 10px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.aq-stamp-btn:hover { border-color: var(--green); color: var(--green); }
+.aq-view-link {
+  font-size: 10px;
+  color: var(--text-4);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.aq-view-link:hover { color: var(--accent); }
+
+/* ── FILTER BAR ── */
+.ct-filter-bar {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.filter-group { display: flex; flex-direction: column; gap: 5px; }
+.filter-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+.filter-input  { width: 220px; }
+.filter-select { min-width: 160px; }
+
+.closed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  cursor: pointer;
+  margin-left: auto;
+  align-self: flex-end;
+  padding-bottom: 6px;
+}
+.closed-toggle input { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.ct-count {
+  align-self: flex-end;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  padding-bottom: 6px;
+}
+
+/* ── TABLE ── */
+.ct-table th { cursor: pointer; user-select: none; }
+.ct-table th:hover { color: var(--accent); }
+.ct-table th.sort-asc::after  { content: ' ↑'; color: var(--accent); }
+.ct-table th.sort-desc::after { content: ' ↓'; color: var(--accent); }
+
+tr.age-ok   td:first-child { border-left: 3px solid var(--green); }
+tr.age-warn td:first-child { border-left: 3px solid var(--yellow); }
+tr.age-crit td:first-child { border-left: 3px solid var(--red); }
+tr.row-closed td { opacity: 0.55; }
+tr.row-closed { display: none; }
+tr.row-closed.show { display: table-row; }
+
+.age-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.age-ok   { background: rgba(0,230,118,0.1);  color: var(--green); }
+.age-warn { background: rgba(255,215,64,0.1);  color: var(--yellow); }
+.age-crit { background: rgba(255,82,82,0.1);   color: var(--red); }
+
+/* ── LIFECYCLE DOTS ── */
+.lc-dots {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 5px;
+}
+.lc-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.lc-dot.done { background: var(--green); }
+.lc-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  min-width: 6px;
+  max-width: 14px;
+}
+.lc-line.done { background: rgba(0,230,118,0.35); }
+
+/* loc badge */
+.loc-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.loc-lachine  { background: rgba(0,212,255,0.1);  color: var(--accent); }
+.loc-raymond  { background: rgba(255,215,64,0.1);  color: var(--yellow); }
+.loc-sarnia   { background: rgba(0,230,118,0.1);  color: var(--green); }
+.loc-other    { background: var(--surface-2); color: var(--text-3); }
+
+@media (max-width: 1200px) {
+  .aq-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 768px) {
+  .aq-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Car Tracking</div>
+      <div class="page-sub">CSR Action Queue + Full Car Log</div>
+    </div>
+    <a class="btn btn-primary" href="/car/new">+ Add Car</a>
+  </div>
+
+  <!-- Location tabs -->
+  <div class="loc-tabs">
+    <a class="loc-tab {% if not current_location %}active{% endif %}" href="/car-tracking">All</a>
+    {% for loc in locations %}
+    <a class="loc-tab {% if current_location == loc.id %}active{% endif %}"
+       href="/car-tracking?location_id={{ loc.id }}">{{ loc.name }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- ══ ACTION QUEUE ══ -->
+  <div class="aq-section">
+    <div class="aq-header">
+      <div class="aq-title">Action Required</div>
+      <span class="aq-total-badge {% if total_actions > 0 %}has-items{% else %}all-clear{% endif %}">
+        {{ total_actions }}
+      </span>
+      <span class="aq-subtitle">Cars waiting on Customer Service</span>
+    </div>
+
+    {% if total_actions == 0 %}
+    <div class="aq-all-clear">
+      ✓ No actions required — all cars are on track.
+    </div>
+    {% else %}
+
+    {% set buckets = [
+      ('request_pkg',          '📦', 'Request Shopping Package', 'blue'),
+      ('create_estimate',      '📋', 'Send Estimate',            'yellow'),
+      ('follow_up_estimate',   '📞', 'Follow Up Estimate',       'orange'),
+      ('create_work_order',    '🔧', 'Create Work Order',        'teal'),
+      ('request_dispo',        '📤', 'Request Dispo',            'green'),
+      ('send_final_bill',      '💲', 'Send Final Bill',          'green'),
+      ('await_final_approval', '✅', 'Awaiting Final Approval',  'purple'),
+    ] %}
+
+    <div class="aq-grid">
+      {% for key, icon, label, color in buckets %}
+      {% set items = action_queue[key] %}
+      {% set cnt   = items | length %}
+      <div class="aq-bucket">
+        <div class="aq-head color-{{ color }} {% if cnt == 0 %}empty{% endif %}"
+             id="aq-head-{{ key }}"
+             onclick="{% if cnt > 0 %}toggleBucket('{{ key }}'){% endif %}">
+          <div class="aq-head-icon">{{ icon }}</div>
+          <div class="aq-head-label">{{ label }}</div>
+          <div class="aq-head-count">{{ cnt }}</div>
+          {% if cnt > 0 %}<div class="aq-caret">▼</div>{% else %}<div style="font-size:9px;color:var(--text-4);margin-top:4px">All clear ✓</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Expanded panels (shown below grid when a bucket is clicked) -->
+    {% for key, icon, label, color in buckets %}
+    {% set items = action_queue[key] %}
+    {% if items %}
+    <div class="aq-panel" id="aq-panel-{{ key }}">
+      <div class="aq-panel-title">
+        <span>{{ icon }}</span>
+        {{ label }}
+        <span style="color:var(--text-4);font-weight:400">({{ items | length }} car{{ 's' if items | length != 1 }})</span>
+      </div>
+      {% for item in items %}
+      {% set wo = item.wo %}
+      {% set dw = item.days_waiting or 0 %}
+      <div class="aq-row">
+        <a class="aq-car-id" href="/car/{{ wo.id }}">{{ item.car.full_id }}</a>
+        <div class="aq-customer">{{ item.car.customer.name if item.car.customer else '—' }}</div>
+        <!-- location badge -->
+        {% for loc in locations %}{% if loc.id == wo.location_id %}
+        <span class="loc-badge loc-{{ loc.name | lower }}">{{ loc.name }}</span>
+        {% endif %}{% endfor %}
+        <span class="aq-days {% if dw < 7 %}d-ok{% elif dw < 14 %}d-warn{% else %}d-hot{% endif %}">
+          {{ dw }}d
+        </span>
+        <span class="badge badge-{{ get_status_color(wo.status) }}" style="font-size:9px">{{ wo.status }}</span>
+        {% if item.stamp_field %}
+        <form method="POST" action="/car-tracking/stamp/{{ wo.id }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="field" value="{{ item.stamp_field }}">
+          <button class="aq-stamp-btn" type="submit">✓ {{ item.action_label }}</button>
+        </form>
+        {% else %}
+        <a class="aq-view-link" href="/car/{{ wo.id }}">Open Car →</a>
+        {% endif %}
+        <a class="aq-view-link" href="/car/{{ wo.id }}" style="color:var(--text-4)">View →</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% endif %}
+  </div>
+
+  <!-- ══ FILTER BAR ══ -->
+  <div class="ct-filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Search</div>
+      <input class="form-input filter-input" type="text" id="ct-search"
+             placeholder="Car ID or customer…" value="{{ search }}"
+             oninput="filterTable()">
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Status</div>
+      <select class="form-select filter-select" id="ct-status-filter" onchange="filterTable()">
+        <option value="">All statuses</option>
+        {% for s in all_statuses %}
+        <option value="{{ s }}" {% if current_status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if not user.location_id %}
+    <div class="filter-group">
+      <div class="filter-label">Location</div>
+      <select class="form-select filter-select" id="ct-loc-filter" onchange="filterTable()">
+        <option value="">All locations</option>
+        {% for loc in locations %}
+        <option value="{{ loc.id }}" {% if current_location == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <label class="closed-toggle" for="ct-show-closed">
+      <input type="checkbox" id="ct-show-closed" onchange="toggleClosed()">
+      Show closed (last 30d)
+    </label>
+    <div class="ct-count" id="ct-count">{{ all_wos | length }} car{{ 's' if all_wos | length != 1 }}</div>
+  </div>
+
+  <!-- ══ FULL CAR TABLE ══ -->
+  <div class="section-head" style="margin-bottom:10px">
+    <div class="section-title">All Active Cars</div>
+    <a class="section-link" href="/car/new">+ Add Car</a>
+  </div>
+  <div class="table-wrap" style="margin-bottom:24px">
+    <table class="data-table ct-table" id="ct-table">
+      <thead>
+        <tr>
+          <th data-col="0" onclick="sortTable(0)">Car ID</th>
+          <th data-col="1" onclick="sortTable(1)">Customer</th>
+          <th data-col="2" onclick="sortTable(2)">Location</th>
+          <th data-col="3" onclick="sortTable(3)">Purpose</th>
+          <th data-col="4">Status</th>
+          <th data-col="5" onclick="sortTable(5)">Arrived</th>
+          <th data-col="6" onclick="sortTable(6)">Proj. Out</th>
+          <th data-col="7" onclick="sortTable(7)">Days</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="ct-tbody">
+
+        <!-- Active rows -->
+        {% for wo in all_wos %}
+        {% set days = wo.days_on_site or 0 %}
+        {% set loc_name = '' %}
+        {% for loc in locations %}{% if loc.id == wo.location_id %}{% set loc_name = loc.name %}{% endif %}{% endfor %}
+        <tr class="ct-row {% if days > 60 %}age-crit{% elif days >= 30 %}age-warn{% else %}age-ok{% endif %}"
+            data-car-id="{{ wo.car.full_id | lower }}"
+            data-customer="{{ (wo.car.customer.name if wo.car.customer else '') | lower }}"
+            data-loc-id="{{ wo.location_id }}"
+            data-status="{{ wo.status }}"
+            data-days="{{ days }}">
+          <td>
+            <a class="car-id" href="/car/{{ wo.id }}">{{ wo.car.full_id }}</a>
+            <!-- Lifecycle dots -->
+            <div class="lc-dots">
+              {% set stages = [
+                wo.date_arrived,
+                wo.inbound_inspection,
+                wo.estimate_sent,
+                wo.work_order_created,
+                wo.repair_start_date,
+                wo.outbound_inspection,
+                wo.billed_out,
+              ] %}
+              {% for s in stages %}
+              <span class="lc-dot {% if s %}done{% endif %}"></span>
+              {% if not loop.last %}
+              <span class="lc-line {% if s and stages[loop.index] %}done{% endif %}"></span>
+              {% endif %}
+              {% endfor %}
+            </div>
+          </td>
+          <td class="strong" style="font-size:12px">{{ wo.car.customer.name if wo.car.customer else '—' }}</td>
+          <td>
+            <span class="loc-badge loc-{{ loc_name | lower }}">{{ loc_name or '—' }}</span>
+          </td>
+          <td style="font-size:11px;color:var(--text-2)">{{ wo.purpose or '—' }}</td>
+          <td>
+            {% set color = get_status_color(wo.status) %}
+            <span class="badge badge-{{ color }}">{{ wo.status }}</span>
+          </td>
+          <td class="mono" style="color:var(--text-2);font-size:11px" data-sort="{{ wo.date_arrived.isoformat() if wo.date_arrived else '0000' }}">
+            {{ wo.date_arrived.strftime('%b %d') if wo.date_arrived else '—' }}
+          </td>
+          <td class="mono" style="font-size:11px" data-sort="{{ wo.projected_outbound.isoformat() if wo.projected_outbound else '9999' }}">
+            {% if wo.projected_outbound %}
+            <span style="color:{% if wo.is_overdue %}var(--red){% else %}var(--text-2){% endif %}">
+              {{ wo.projected_outbound.strftime('%b %d') }}
+              {% if wo.is_overdue %} !{% endif %}
+            </span>
+            {% else %}<span style="color:var(--text-4)">—</span>{% endif %}
+          </td>
+          <td data-sort="{{ days }}">
+            <span class="age-pill {% if days > 60 %}age-crit{% elif days >= 30 %}age-warn{% else %}age-ok{% endif %}">
+              {{ days }}d
+            </span>
+          </td>
+          <td>
+            <a class="btn btn-ghost" href="/car/{{ wo.id }}"
+               style="padding:3px 10px;font-size:10px">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+
+        <!-- Closed rows (hidden by default) -->
+        {% for wo in recent_closed %}
+        {% set loc_name = '' %}
+        {% for loc in locations %}{% if loc.id == wo.location_id %}{% set loc_name = loc.name %}{% endif %}{% endfor %}
+        <tr class="ct-row row-closed"
+            data-car-id="{{ wo.car.full_id | lower }}"
+            data-customer="{{ (wo.car.customer.name if wo.car.customer else '') | lower }}"
+            data-loc-id="{{ wo.location_id }}"
+            data-status="Closed">
+          <td>
+            <a class="car-id" href="/car/{{ wo.id }}">{{ wo.car.full_id }}</a>
+            <div class="lc-dots">
+              {% set stages = [wo.date_arrived,wo.inbound_inspection,wo.estimate_sent,wo.work_order_created,wo.repair_start_date,wo.outbound_inspection,wo.billed_out] %}
+              {% for s in stages %}
+              <span class="lc-dot {% if s %}done{% endif %}"></span>
+              {% if not loop.last %}<span class="lc-line done"></span>{% endif %}
+              {% endfor %}
+            </div>
+          </td>
+          <td class="strong" style="font-size:12px">{{ wo.car.customer.name if wo.car.customer else '—' }}</td>
+          <td><span class="loc-badge loc-{{ loc_name | lower }}">{{ loc_name or '—' }}</span></td>
+          <td style="font-size:11px;color:var(--text-2)">{{ wo.purpose or '—' }}</td>
+          <td><span class="badge badge-green">Closed</span></td>
+          <td class="mono" style="color:var(--text-2);font-size:11px">
+            {{ wo.date_arrived.strftime('%b %d') if wo.date_arrived else '—' }}
+          </td>
+          <td class="mono" style="font-size:11px;color:var(--text-3)">
+            {{ wo.billed_out.strftime('%b %d') if wo.billed_out else '—' }}
+          </td>
+          <td></td>
+          <td><a class="btn btn-ghost" href="/car/{{ wo.id }}" style="padding:3px 10px;font-size:10px">View</a></td>
+        </tr>
+        {% endfor %}
+
+        <!-- Empty state -->
+        <tr id="ct-empty" style="display:none">
+          <td colspan="9" class="empty">No cars found matching your search.</td>
+        </tr>
+
+        {% if not all_wos and not recent_closed %}
+        <tr><td colspan="9" class="empty">No active work orders</td></tr>
+        {% endif %}
+
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── BUCKET ACCORDION ──────────────────────────────────
+var openBucket = null;
+
+function toggleBucket(key) {
+  var head  = document.getElementById('aq-head-'  + key);
+  var panel = document.getElementById('aq-panel-' + key);
+  if (!panel) return;
+
+  if (openBucket && openBucket !== key) {
+    var prevHead  = document.getElementById('aq-head-'  + openBucket);
+    var prevPanel = document.getElementById('aq-panel-' + openBucket);
+    if (prevHead)  prevHead.classList.remove('open');
+    if (prevPanel) prevPanel.classList.remove('open');
+  }
+
+  var isOpen = panel.classList.contains('open');
+  head.classList.toggle('open', !isOpen);
+  panel.classList.toggle('open', !isOpen);
+  openBucket = isOpen ? null : key;
+}
+
+// ── LIVE TABLE FILTER ─────────────────────────────────
+function filterTable() {
+  var search  = (document.getElementById('ct-search').value || '').toLowerCase().trim();
+  var status  = document.getElementById('ct-status-filter')
+                 ? document.getElementById('ct-status-filter').value : '';
+  var locEl   = document.getElementById('ct-loc-filter');
+  var locId   = locEl ? locEl.value : '';
+
+  var rows    = document.querySelectorAll('#ct-tbody .ct-row:not(.row-closed)');
+  var visible = 0;
+
+  rows.forEach(function(row) {
+    var carId    = row.getAttribute('data-car-id')   || '';
+    var customer = row.getAttribute('data-customer') || '';
+    var rowLoc   = row.getAttribute('data-loc-id')  || '';
+    var rowSt    = row.getAttribute('data-status')  || '';
+
+    var matchSearch = !search || carId.includes(search) || customer.includes(search);
+    var matchStatus = !status || rowSt === status;
+    var matchLoc    = !locId  || rowLoc === locId;
+
+    var show = matchSearch && matchStatus && matchLoc;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  var emptyRow = document.getElementById('ct-empty');
+  emptyRow.style.display = visible === 0 ? '' : 'none';
+
+  document.getElementById('ct-count').textContent =
+    visible + ' car' + (visible !== 1 ? 's' : '');
+}
+
+// ── TOGGLE CLOSED ROWS ────────────────────────────────
+function toggleClosed() {
+  var show = document.getElementById('ct-show-closed').checked;
+  document.querySelectorAll('.row-closed').forEach(function(r) {
+    r.classList.toggle('show', show);
+  });
+}
+
+// ── TABLE SORT ────────────────────────────────────────
+var sortState = { col: -1, asc: true };
+
+function sortTable(col) {
+  var tbody = document.getElementById('ct-tbody');
+  var rows  = Array.from(tbody.querySelectorAll('tr.ct-row:not(.row-closed)'));
+
+  sortState.asc = (sortState.col === col) ? !sortState.asc : true;
+  sortState.col = col;
+
+  // Update header indicators
+  document.querySelectorAll('.ct-table th').forEach(function(th) {
+    th.classList.remove('sort-asc', 'sort-desc');
+  });
+  var th = document.querySelector('.ct-table th[data-col="' + col + '"]');
+  if (th) th.classList.add(sortState.asc ? 'sort-asc' : 'sort-desc');
+
+  rows.sort(function(a, b) {
+    var aCells = a.querySelectorAll('td');
+    var bCells = b.querySelectorAll('td');
+    var aEl = aCells[col];
+    var bEl = bCells[col];
+    if (!aEl || !bEl) return 0;
+
+    // Use data-sort if available, else text content
+    var aVal = (aEl.getAttribute('data-sort') || aEl.textContent || '').trim().toLowerCase();
+    var bVal = (bEl.getAttribute('data-sort') || bEl.textContent || '').trim().toLowerCase();
+
+    // Try numeric comparison
+    var aNum = parseFloat(aVal);
+    var bNum = parseFloat(bVal);
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return sortState.asc ? aNum - bNum : bNum - aNum;
+    }
+    return sortState.asc
+      ? aVal.localeCompare(bVal)
+      : bVal.localeCompare(aVal);
+  });
+
+  rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+// Apply any server-side search/status filter on load
+(function() {
+  var search = document.getElementById('ct-search').value;
+  var status = document.getElementById('ct-status-filter')
+               ? document.getElementById('ct-status-filter').value : '';
+  if (search || status) filterTable();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — Inbound Car{% endblock %}
+
+{% block extra_head %}
+<style>
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(0,212,255,0.05);
+  border: 1px solid rgba(0,212,255,0.15);
+  border-radius: var(--radius-sm);
+  padding: 13px 16px;
+  margin-bottom: 22px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.info-box strong { color: var(--accent); }
+.section-divider {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-4);
+  margin: 18px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-sm">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Inbound Car</div>
+      <div class="page-sub">Create a new work order for an incoming railcar</div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <span style="font-size:16px;flex-shrink:0">ℹ</span>
+    <span><strong>Returning car?</strong> Enter the car mark and number — if the car already exists in the system a new visit will be created automatically.</span>
+  </div>
+
+  <form method="POST" action="/car/new">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Car Identity -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">Car Identity</div></div>
+      <div class="card-body">
+        <div class="section-divider">Identification</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Car Mark <span class="req">*</span></label>
+            <input class="form-input" type="text" name="car_mark" placeholder="e.g. CNWX"
+                   required autocomplete="off"
+                   style="font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.06em">
+            <div class="form-hint">Reporting mark (letters only)</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Car Number <span class="req">*</span></label>
+            <input class="form-input" type="text" name="car_number" placeholder="e.g. 123456"
+                   required autocomplete="off"
+                   style="font-family:'IBM Plex Mono',monospace;letter-spacing:0.04em">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Customer</label>
+            <input class="form-input" type="text" name="customer_name"
+                   list="customer-list" placeholder="Start typing…" autocomplete="off">
+            <datalist id="customer-list">
+              {% for c in customers %}<option value="{{ c.name }}">{% endfor %}
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Commodity</label>
+            <input class="form-input" type="text" name="commodity" placeholder="e.g. Grain, Potash…">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work Order Details -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">Work Order Details</div></div>
+      <div class="card-body">
+
+        <div class="section-divider">Assignment</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Facility <span class="req">*</span></label>
+            <select class="form-select" name="location_id" required>
+              {% if not user.location_id %}<option value="">— Select location —</option>{% endif %}
+              {% for loc in locations %}
+              <option value="{{ loc.id }}" {% if user.location_id == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose</label>
+            <select class="form-select" name="purpose">
+              <option value="">-- Select Purpose --</option>
+              <option value="Bad Order">Bad Order</option>
+              <option value="Full Qualification">Full Qualification</option>
+              <option value="Partial Qualification">Partial Qualification</option>
+              <option value="Railroad Damage">Railroad Damage</option>
+              <option value="Lining Inspection">Lining Inspection</option>
+              <option value="Reline">Reline</option>
+              <option value="Cleaning">Cleaning</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select class="form-select" name="priority">
+              <option value="1">1 — Critical</option>
+              <option value="2">2 — High</option>
+              <option value="3" selected>3 — Normal</option>
+              <option value="4">4 — Low</option>
+              <option value="5">5 — Deferred</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date Arrived</label>
+            <input class="form-input" type="date" name="date_arrived">
+          </div>
+        </div>
+
+        <div class="section-divider">Scope &amp; Financials</div>
+        <div class="form-grid">
+          <div class="form-group span3">
+            <label class="form-label">Reason Shopped</label>
+            <input class="form-input" type="text" name="reason_shopped"
+                   placeholder="Brief reason for inbounding this car">
+          </div>
+          <div class="form-group span3">
+            <label class="form-label">Scope of Work</label>
+            <textarea class="form-textarea" name="scope_of_work"
+                      placeholder="Describe the work to be performed…"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Est. Revenue ($)</label>
+            <input class="form-input" type="number" name="estimated_revenue"
+                   step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Est. Hours</label>
+            <input class="form-input" type="number" name="estimated_hours"
+                   step="0.5" min="0" placeholder="0.0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shopping Pkg Received</label>
+            <input class="form-input" type="date" name="shopping_pkg_received">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" type="submit">Create Work Order</button>
+      <a class="btn btn-ghost" href="/car-tracking">Cancel</a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — Cleaning{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── CAPACITY BAR ── */
+.cap-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+.cap-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+.cap-nums { font-family: 'IBM Plex Mono', monospace; color: var(--text-2); font-size: 12px; }
+.cap-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.cap-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.4s; }
+.cap-fill.warn   { background: var(--yellow); }
+.cap-fill.danger { background: var(--red); }
+
+/* ── RACK GRID ── */
+.rack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.rack-slot {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 11px;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s;
+}
+.rack-slot.occ       { border-color: rgba(0,212,255,0.25); background: var(--surface); }
+.rack-slot.occ-clean { border-color: rgba(0,230,118,0.25); background: var(--surface); }
+.rack-slot-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.rack-car-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.2;
+}
+.rack-car-id:hover { text-decoration: underline; }
+.rack-date { font-size: 10px; color: var(--text-3); }
+.rack-empty-mark { margin-top: auto; font-size: 18px; color: var(--border); text-align: center; }
+
+/* ── ENTRY TABLE ── */
+.cleaning-table tr.row-cleaned {
+  border-left: 3px solid var(--green);
+  opacity: 0.72;
+}
+.cleaning-table tr.row-cleaned td {
+  background: rgba(0,230,118,0.03);
+}
+
+/* ── INLINE FORMS ── */
+.cs-row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.cs-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  color: var(--text);
+  font-size: 11px;
+  outline: none;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: border-color 0.15s;
+}
+.cs-select:focus { border-color: var(--accent); }
+.cs-save {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  color: var(--text-2);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cs-save:hover { border-color: var(--accent); color: var(--accent); }
+.cs-slot-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  color: var(--text);
+  font-size: 11px;
+  width: 52px;
+  font-family: 'IBM Plex Mono', monospace;
+  outline: none;
+}
+.cs-slot-input:focus { border-color: var(--accent); }
+.cs-remove {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 7px;
+  color: var(--text-4);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cs-remove:hover { border-color: rgba(255,82,82,0.3); color: var(--red); background: rgba(255,82,82,0.06); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Cleaning Rack — {{ location.name }}</div>
+      <div class="page-sub">{{ cleaning_stats.occupied }} / {{ capacity }} slots occupied · {{ cleaning_stats.cleaned }} cleaned</div>
+    </div>
+    <button class="btn btn-primary" onclick="openSchedule()">+ Schedule Car</button>
+  </div>
+
+  {% if not user.location_id %}
+  <div class="loc-tabs">
+    {% for loc in locations %}
+    <a class="loc-tab {% if loc.id == location.id %}active{% endif %}"
+       href="/cleaning?location_id={{ loc.id }}">{{ loc.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Stat strip -->
+  <div class="stat-strip">
+    <div class="stat-pill">
+      <div class="stat-pill-num">{{ capacity }}</div>
+      <div class="stat-pill-label">Total Slots</div>
+    </div>
+    <div class="stat-pill c-blue">
+      <div class="stat-pill-num">{{ cleaning_stats.occupied }}</div>
+      <div class="stat-pill-label">Occupied</div>
+    </div>
+    <div class="stat-pill c-yellow">
+      <div class="stat-pill-num">{{ cleaning_stats.scheduled }}</div>
+      <div class="stat-pill-label">Scheduled</div>
+    </div>
+    <div class="stat-pill c-orange">
+      <div class="stat-pill-num">{{ cleaning_stats.in_cleaning }}</div>
+      <div class="stat-pill-label">In Cleaning</div>
+    </div>
+    <div class="stat-pill c-green">
+      <div class="stat-pill-num">{{ cleaning_stats.cleaned }}</div>
+      <div class="stat-pill-label">Cleaned</div>
+    </div>
+  </div>
+
+  <!-- Capacity bar -->
+  {% set pct = (cleaning_stats.occupied / capacity * 100) | int if capacity > 0 else 0 %}
+  <div class="cap-wrap">
+    <div class="cap-label">
+      <span>Rack Utilization (active slots)</span>
+      <span class="cap-nums">{{ cleaning_stats.occupied }} / {{ capacity }}</span>
+    </div>
+    <div class="cap-track">
+      <div class="cap-fill {% if pct >= 90 %}danger{% elif pct >= 70 %}warn{% endif %}"
+           style="width:{{ pct }}%"></div>
+    </div>
+  </div>
+
+  <!-- Two-column: rack visual + entry list -->
+  <div class="two-col">
+
+    <!-- Rack visual -->
+    <div>
+      <div class="section-head" style="margin-bottom:12px">
+        <div class="section-title">Rack Slots</div>
+      </div>
+      <div class="rack-grid">
+        {% for i in range(1, capacity + 1) %}
+          {% set entry = slot_map.get(i) %}
+          {% if entry %}
+            <div class="rack-slot {% if entry.cleaning_status == 'Cleaned' %}occ-clean{% else %}occ{% endif %}">
+              <div class="rack-slot-num">Slot {{ i }}</div>
+              {% if entry.work_order %}
+              <a class="rack-car-id" href="/car/{{ entry.work_order.id }}">{{ entry.work_order.car.full_id }}</a>
+              {% endif %}
+              <div class="rack-date">{{ entry.scheduled_date.strftime('%b %d') if entry.scheduled_date else '—' }}</div>
+              {% set cs = entry.cleaning_status %}
+              <span class="badge
+                {% if cs == 'Cleaned' %}badge-green
+                {% elif cs == 'In Cleaning' %}badge-accent
+                {% elif cs == 'Scheduled' %}badge-blue
+                {% elif cs == 'Ready for Cleaning' %}badge-amber
+                {% else %}badge-gray{% endif %}"
+                style="margin-top:auto;align-self:flex-start">{{ cs }}</span>
+            </div>
+          {% else %}
+            <div class="rack-slot">
+              <div class="rack-slot-num">Slot {{ i }}</div>
+              <div class="rack-empty-mark">—</div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Entry list -->
+    <div>
+      <div class="section-head" style="margin-bottom:12px">
+        <div class="section-title">All Entries</div>
+        <div style="font-size:10px;color:var(--text-4);font-family:'IBM Plex Mono',monospace">
+          Cleaned rows are kept until manually removed
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table cleaning-table">
+          <thead>
+            <tr>
+              <th>Car ID</th>
+              <th>Slot</th>
+              <th>Scheduled</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+            <tr class="{% if entry.cleaning_status == 'Cleaned' %}row-cleaned{% endif %}">
+              <td>
+                {% if entry.work_order %}
+                <a class="car-id" href="/car/{{ entry.work_order.id }}">{{ entry.work_order.car.full_id }}</a>
+                {% else %}—{% endif %}
+              </td>
+              <td class="mono" style="color:var(--text-3)">{{ entry.rack_position or '—' }}</td>
+              <td class="mono" style="color:var(--text-2)">{{ entry.scheduled_date.strftime('%b %d') if entry.scheduled_date else '—' }}</td>
+              <td>
+                <form class="cs-row" method="POST" action="/cleaning/update/{{ entry.id }}">
+                  <input type="hidden" name="location_id" value="{{ location.id }}">
+                  <input type="hidden" name="notes" value="{{ entry.notes or '' }}">
+
+                  <!-- Status dropdown -->
+                  <select class="cs-select" name="cleaning_status">
+                    {% for s in ['Ready for Cleaning','Scheduled','In Cleaning','Cleaned','Cancelled'] %}
+                    <option value="{{ s }}" {% if entry.cleaning_status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                  </select>
+
+                  <!-- Slot assignment inline -->
+                  <input class="cs-slot-input" type="number" name="rack_position"
+                         min="1" max="{{ capacity }}"
+                         value="{{ entry.rack_position or '' }}"
+                         placeholder="Slot #"
+                         title="Assign or change rack slot">
+
+                  <button class="cs-save" type="submit">Save</button>
+                </form>
+              </td>
+              <td>
+                <!-- Remove button -->
+                <form method="POST" action="/cleaning/remove/{{ entry.id }}" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="location_id" value="{{ location.id }}">
+                  <button class="cs-remove" type="submit"
+                    onclick="return confirm('Remove {{ entry.work_order.car.full_id if entry.work_order else 'this car' }} from cleaning schedule?')">
+                    ✕ Remove
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty">No cleaning entries</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── SCHEDULE MODAL ── -->
+<div class="modal-overlay" id="schedule-modal">
+  <div class="modal">
+    <div class="modal-title">Schedule Car for Cleaning</div>
+    <form method="POST" action="/cleaning/add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="location_id" value="{{ location.id }}">
+      <div class="form-group">
+        <label class="form-label">Work Order <span style="color:var(--red)">*</span></label>
+        <select class="form-select" name="wo_id" required>
+          <option value="">— Select car —</option>
+          {% for wo in active_wos %}
+          <option value="{{ wo.id }}">{{ wo.car.full_id }} — {{ wo.car.customer.name if wo.car.customer else '?' }} · {{ wo.status }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rack Position (optional)</label>
+        <select class="form-select" name="rack_position">
+          <option value="">— Auto assign —</option>
+          {% for i in range(1, capacity + 1) %}
+          <option value="{{ i }}" {% if i in slot_map %}disabled{% endif %}>
+            Slot {{ i }}{% if i in slot_map %} (occupied){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Scheduled Date</label>
+        <input class="form-input" type="date" name="scheduled_date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Material Notes</label>
+        <input class="form-input" type="text" name="material_notes" placeholder="Any special materials needed">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" name="notes" placeholder="Additional notes…"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="submit">Schedule</button>
+        <button class="btn btn-ghost" type="button" onclick="closeModals()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openSchedule() {
+  document.getElementById('schedule-modal').classList.add('open');
+}
+function closeModals() {
+  document.querySelectorAll('.modal-overlay').forEach(function(el) {
+    el.classList.remove('open');
+  });
+}
+document.querySelectorAll('.modal-overlay').forEach(function(el) {
+  el.addEventListener('click', function(e) { if (e.target === el) closeModals(); });
+});
+</script>
+{% endblock %}

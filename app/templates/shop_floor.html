@@ -1,0 +1,809 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — Shop Floor{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── TOP BAR ── */
+.sf-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.sf-util-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  flex: 1;
+  min-width: 240px;
+}
+.sf-util-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.sf-util-bar { flex: 1; position: relative; }
+.sf-util-track {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.sf-util-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s;
+}
+.sf-util-fill.green  { background: var(--green); }
+.sf-util-fill.amber  { background: var(--orange); }
+.sf-util-fill.red    { background: var(--red); }
+.sf-util-pct {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* ── ZONE SECTION ── */
+.zone-section { margin-bottom: 32px; }
+.zone-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.zone-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.zone-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 2px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+.zone-chip.has-occ { color: var(--accent); border-color: rgba(0,212,255,0.25); }
+
+/* ── SPOT GRID ── */
+.spot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+/* ── SPOT CARD ── */
+.spot-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.spot-card.occupied {
+  border-color: rgba(0,212,255,0.18);
+}
+.spot-card.occupied:hover { border-color: var(--accent); }
+.spot-card:not(.occupied):hover { border-color: var(--text-4); }
+
+.spot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.spot-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.05em;
+}
+.spot-dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot-empty { background: var(--text-4); opacity: 0.4; }
+.dot-busy  { background: var(--accent); box-shadow: 0 0 4px rgba(0,212,255,0.5); }
+.dot-warn  { background: var(--orange); }
+.dot-hold  { background: var(--red); }
+
+.spot-body { padding: 11px 12px; }
+
+/* Empty state */
+.spot-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+.spot-empty-label { font-size: 11px; color: var(--text-4); }
+.spot-assign-btn {
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: all 0.15s;
+}
+.spot-assign-btn:hover { background: rgba(0,212,255,0.14); }
+
+/* Occupied state */
+.spot-car-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 2px;
+}
+.spot-car-id:hover { text-decoration: underline; }
+.spot-customer { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+
+/* Warning dots row */
+.warn-row { display: flex; gap: 5px; margin-bottom: 8px; align-items: center; }
+.warn-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  cursor: default;
+  flex-shrink: 0;
+}
+.warn-dot.red    { background: var(--red); }
+.warn-dot.orange { background: var(--orange); }
+.warn-dot.yellow { background: var(--yellow); }
+.warn-label { font-size: 9px; color: var(--text-3); font-family: 'IBM Plex Mono', monospace; }
+
+/* Progress bars */
+.prog-row {
+  margin-bottom: 8px;
+}
+.prog-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-3);
+  margin-bottom: 3px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.prog-note { font-size: 8px; color: var(--text-4); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+.progress-track { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; }
+.progress-fill.high { background: var(--green); }
+.progress-fill.mid  { background: var(--orange); }
+.progress-fill.low  { background: var(--accent); }
+
+/* Info rows */
+.spot-info { font-size: 10px; color: var(--text-3); line-height: 1.8; margin-bottom: 8px; }
+.spot-info span { font-family: 'IBM Plex Mono', monospace; color: var(--text-2); }
+
+/* Parts pill */
+.parts-pill {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.parts-ok   { background: rgba(0,230,118,0.1);  color: var(--green);  border: 1px solid rgba(0,230,118,0.25); }
+.parts-warn { background: rgba(255,152,0,0.1);  color: var(--orange); border: 1px solid rgba(255,152,0,0.25); }
+.parts-bad  { background: rgba(255,82,82,0.1);  color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
+
+/* Action buttons */
+.spot-actions { display: flex; gap: 6px; }
+.spot-action-btn {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--surface-2);
+  color: var(--text-2);
+  transition: all 0.15s;
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+.spot-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.spot-action-btn.danger:hover { border-color: rgba(255,82,82,0.4); color: var(--red); background: rgba(255,82,82,0.05); }
+
+/* ── INLINE UPDATE PANEL ── */
+.inline-update {
+  display: none;
+  background: var(--surface-2);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 14px 12px;
+  border-top: 1px solid rgba(0,212,255,0.15);
+}
+.inline-update.open { display: block; }
+.inline-update-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.inline-hold { display: none; }
+.inline-hold.visible { display: block; }
+.pct-note { font-size: 9px; color: var(--text-4); margin-top: 2px; }
+
+/* ── NEXT QUEUE STRIP ── */
+.zone-queue {
+  margin-top: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.zone-queue-head {
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+}
+.queue-items { display: flex; gap: 0; flex-wrap: wrap; }
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-right: 1px solid var(--border);
+  flex: 1;
+  min-width: 220px;
+}
+.queue-item:last-child { border-right: none; }
+.qi-car {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+}
+.qi-sub { font-size: 10px; color: var(--text-3); }
+.qi-rph {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  margin-left: auto;
+}
+.qi-rph.green  { color: var(--green); }
+.qi-rph.yellow { color: var(--yellow); }
+.qi-rph.red    { color: var(--red); }
+.qi-assign-btn {
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  padding: 3px 9px;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.qi-assign-btn:hover { background: rgba(0,212,255,0.15); }
+.queue-empty {
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--text-4);
+  font-family: 'IBM Plex Mono', monospace;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ── TOP BAR ── -->
+  <div class="sf-topbar">
+    <!-- Location tabs -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      {% for loc in locations %}
+      <a class="loc-tab {% if loc.id == location.id %}active{% endif %}"
+         href="/shop-floor?location_id={{ loc.id }}">{{ loc.name }}</a>
+      {% endfor %}
+    </div>
+
+    <!-- Utilization bar -->
+    {% if total_spots > 0 %}
+    {% set util_pct = (occupied_spots / total_spots * 100) | round | int %}
+    <div class="sf-util-block">
+      <div class="sf-util-label">{{ occupied_spots }} / {{ total_spots }} spots</div>
+      <div class="sf-util-bar">
+        <div class="sf-util-track">
+          <div class="sf-util-fill {% if util_pct < 60 %}green{% elif util_pct <= 85 %}amber{% else %}red{% endif %}"
+               style="width:{{ util_pct }}%"></div>
+        </div>
+        <div class="sf-util-pct">{{ util_pct }}% occupied</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Assign button -->
+    <button class="btn btn-primary" onclick="openAssign(null, 'Select Spot')">+ Assign Car to Spot</button>
+  </div>
+
+  <!-- ── ZONE SECTIONS ── -->
+  {% for zone_name, zone in zones.items() %}
+  <div class="zone-section">
+    <div class="zone-header">
+      <div class="zone-name">{{ zone_name }}</div>
+      <div class="zone-chip {% if zone.occupied > 0 %}has-occ{% endif %}">
+        {{ zone.occupied }} / {{ zone.total }} spots
+      </div>
+    </div>
+
+    <div class="spot-grid">
+      {% for sd in zone.spots %}
+      {% set ass = sd.assignment %}
+      {% set wo  = sd.wo %}
+      {% set car = sd.car %}
+
+      <div class="spot-card {% if ass %}occupied{% endif %}" id="card-{{ ass.id if ass else ('empty-' ~ loop.index ~ '-' ~ zone_name | replace(' ', '-')) }}">
+        <!-- Card head -->
+        <div class="spot-head">
+          <div class="spot-name">{{ sd.spot.name }}</div>
+          {% if ass %}
+            {% set astat = ass.status %}
+            <div class="spot-dot {% if astat == 'On Hold' %}dot-hold{% elif astat in ('Waiting Material','Waiting Customer Approval','Rework Needed') %}dot-warn{% else %}dot-busy{% endif %}"></div>
+          {% else %}
+            <div class="spot-dot dot-empty"></div>
+          {% endif %}
+        </div>
+
+        <!-- Card body -->
+        {% set ce = cleaning_slot_map.get(sd.spot.id) if cleaning_slot_map is defined else none %}
+        <div class="spot-body">
+
+          {% if zone_name == 'Cleaning Rack' and ce %}
+            {# ── CLEANING RACK CARD: driven by CleaningEntry data ── #}
+            {% set ce_wo  = ce.work_order %}
+            {% set ce_car = ce_wo.car if ce_wo else none %}
+            {% set cs = ce.cleaning_status %}
+            {% if ce_car %}
+            <a class="spot-car-id" href="/car/{{ ce_wo.id }}">{{ ce_car.full_id }}</a>
+            <div class="spot-customer">{{ ce_car.customer.name if ce_car.customer else '—' }}</div>
+            {% endif %}
+            <div style="margin-bottom:6px">
+              <span class="badge {% if cs == 'Cleaned' %}badge-green{% elif cs == 'In Cleaning' %}badge-accent{% elif cs == 'Scheduled' %}badge-blue{% elif cs == 'Ready for Cleaning' %}badge-amber{% else %}badge-gray{% endif %}"
+                    style="font-size:9px;padding:2px 8px">{{ cs }}</span>
+            </div>
+            <div class="spot-info">
+              {% if ce.scheduled_date %}Scheduled: <span>{{ ce.scheduled_date.strftime('%b %d, %Y') }}</span><br>{% endif %}
+              {% if ce.material_notes %}Materials: <span>{{ ce.material_notes }}</span><br>{% endif %}
+            </div>
+            <a href="/cleaning?location_id={{ location.id }}"
+               style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--accent);text-decoration:none">
+              → Manage on Cleaning page
+            </a>
+
+          {% elif ass and wo and car %}
+            {# ── NORMAL OCCUPIED CARD ── #}
+
+            <!-- Car ID + customer -->
+            <a class="spot-car-id" href="/car/{{ wo.id }}">{{ car.full_id }}</a>
+            <div class="spot-customer">{{ wo.car.customer.name if wo.car.customer else '—' }}</div>
+
+            <!-- Status badge -->
+            {% set color = get_status_color(ass.status) %}
+            <div style="margin-bottom:8px">
+              <span class="badge badge-{{ color }}" style="font-size:9px;padding:2px 8px">{{ ass.status }}</span>
+            </div>
+
+            <!-- Warning dots -->
+            {% set warns = sd.warnings %}
+            {% if warns %}
+            <div class="warn-row">
+              {% for w in warns %}
+              <div class="warn-dot {{ w.level }}" title="{{ w.message }}"></div>
+              {% endfor %}
+              <span class="warn-label">{{ warns | length }} warning{{ 's' if warns | length != 1 }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Progress bars -->
+            {% if sd.auto_pct is not none %}
+            <div class="prog-row">
+              <div class="prog-label"><span>Auto</span><span>{{ sd.auto_pct }}%</span></div>
+              <div class="progress-track">
+                <div class="progress-fill {% if sd.auto_pct >= 80 %}high{% elif sd.auto_pct >= 40 %}mid{% else %}low{% endif %}"
+                     style="width:{{ sd.auto_pct }}%"></div>
+              </div>
+              <div class="prog-note">(updates daily from start → target date)</div>
+            </div>
+            {% endif %}
+            {% if ass.pct_complete and ass.pct_complete > 0 %}
+            <div class="prog-row">
+              <div class="prog-label"><span>Manual</span><span>{{ ass.pct_complete }}%</span></div>
+              <div class="progress-track">
+                <div class="progress-fill {% if ass.pct_complete >= 80 %}high{% elif ass.pct_complete >= 40 %}mid{% else %}low{% endif %}"
+                     style="width:{{ ass.pct_complete }}%"></div>
+              </div>
+            </div>
+            {% endif %}
+            {% if sd.auto_pct is none and (not ass.pct_complete or ass.pct_complete == 0) %}
+            <div class="prog-row">
+              <div class="prog-label"><span>Progress</span><span>—</span></div>
+              <div class="progress-track"><div class="progress-fill low" style="width:0%"></div></div>
+              <div class="prog-note">Set target date to enable auto-progress</div>
+            </div>
+            {% endif %}
+
+            <!-- Info rows -->
+            <div class="spot-info">
+              {% if ass.target_date %}Target: <span>{{ ass.target_date.strftime('%b %d, %Y') }}</span><br>{% endif %}
+              Days in spot: <span>{{ ass.days_in_spot }}d</span><br>
+              {% if ass.technician %}Tech: <span>{{ ass.technician }}</span><br>{% endif %}
+              {% if ass.actual_hours or ass.estimated_hours %}
+              Hours: <span>{{ ass.actual_hours or 0 }}h actual{% if ass.estimated_hours %} / {{ ass.estimated_hours }}h est{% endif %}</span><br>
+              {% endif %}
+            </div>
+
+            <!-- Parts pill -->
+            {% if wo.parts_status %}
+              {% if wo.parts_status == 'Available' %}
+                <div class="parts-pill parts-ok">Parts: {{ wo.parts_status }}</div>
+              {% elif wo.parts_status in ('Ordered', 'Waiting ETA') %}
+                <div class="parts-pill parts-bad">Parts: {{ wo.parts_status }}{% if wo.parts_eta %} · {{ wo.parts_eta.strftime('%b %d') }}{% endif %}</div>
+              {% else %}
+                <div class="parts-pill parts-warn">Parts: {{ wo.parts_status }}</div>
+              {% endif %}
+            {% endif %}
+
+            <!-- Last updated by -->
+            {% if ass.updated_by or ass.assigned_by %}
+            <div style="margin-top:7px;font-size:9px;color:var(--text-4);line-height:1.5;border-top:1px solid var(--border-sub);padding-top:6px">
+              {% if ass.updated_by %}
+                Updated by <span style="color:var(--text-3)">{{ ass.updated_by }}</span>
+                {% if ass.updated_at %} · {{ ass.updated_at.strftime('%b %d, %H:%M') }}{% endif %}
+              {% else %}
+                Assigned by <span style="color:var(--text-3)">{{ ass.assigned_by }}</span>
+                {% if ass.assigned_at %} · {{ ass.assigned_at.strftime('%b %d, %H:%M') }}{% endif %}
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Action buttons -->
+            <div class="spot-actions">
+              <button class="spot-action-btn"
+                onclick="toggleInlineUpdate('panel-{{ ass.id }}')">
+                Update
+              </button>
+              <form method="POST" action="/shop-floor/clear-spot/{{ ass.id }}" style="flex:1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="location_id" value="{{ location.id }}">
+                <button class="spot-action-btn danger" type="submit"
+                  onclick="return confirm('Clear {{ car.full_id }} from {{ sd.spot.name }}?')">
+                  Clear
+                </button>
+              </form>
+            </div>
+
+          {% else %}
+            {# ── EMPTY SPOT ── #}
+            <div class="spot-empty-state">
+              <div class="spot-empty-label">Available</div>
+              <button class="spot-assign-btn"
+                onclick="openAssign({{ sd.spot.id }}, '{{ sd.spot.name }}')">
+                + Assign Car
+              </button>
+            </div>
+          {% endif %}
+        </div><!-- .spot-body -->
+
+        <!-- ── INLINE UPDATE PANEL ── -->
+        {% if ass %}
+        <div class="inline-update" id="panel-{{ ass.id }}">
+          <div class="inline-update-title">Update Progress</div>
+          <form method="POST" action="/shop-floor/update-spot/{{ ass.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="location_id" value="{{ location.id }}">
+
+            <div class="form-group" style="margin-bottom:8px">
+              <label class="form-label" style="font-size:9px">Status</label>
+              <select class="form-select" name="status" style="font-size:11px;padding:5px 8px"
+                onchange="toggleHoldField(this, 'hold-{{ ass.id }}')">
+                {% for s in ['Under Repair','Waiting Material','Waiting Customer Approval',
+                             'Waiting Cleaning','On Hold','Rework Needed','Completed'] %}
+                <option value="{{ s }}" {% if ass.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group inline-hold {% if ass.status == 'On Hold' %}visible{% endif %}"
+                 id="hold-{{ ass.id }}" style="margin-bottom:8px">
+              <label class="form-label" style="font-size:9px">Hold Reason</label>
+              <input class="form-input" type="text" name="hold_reason" style="font-size:11px;padding:5px 8px"
+                     value="{{ ass.hold_reason or '' }}" placeholder="Why is this on hold?">
+            </div>
+
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <div class="form-group" style="flex:1;margin-bottom:0">
+                <label class="form-label" style="font-size:9px">% Complete</label>
+                <input class="form-input" type="number" name="pct_complete"
+                       style="font-size:11px;padding:5px 8px"
+                       min="0" max="100" step="5"
+                       value="{{ ass.pct_complete or '' }}"
+                       placeholder="—">
+                <div class="pct-note">Leave blank for auto-calc</div>
+              </div>
+              <div class="form-group" style="flex:1;margin-bottom:0">
+                <label class="form-label" style="font-size:9px">Actual Hours</label>
+                <input class="form-input" type="number" name="actual_hours"
+                       style="font-size:11px;padding:5px 8px"
+                       step="0.5" min="0"
+                       value="{{ ass.actual_hours or '' }}"
+                       placeholder="0.0">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:10px">
+              <label class="form-label" style="font-size:9px">Notes</label>
+              <textarea class="form-textarea" name="notes"
+                        style="font-size:11px;min-height:52px;padding:5px 8px"
+                        placeholder="Progress notes…">{{ ass.notes or '' }}</textarea>
+            </div>
+
+            <div style="display:flex;gap:6px">
+              <button type="submit" class="btn btn-primary" style="font-size:10px;padding:5px 14px">Save</button>
+              <button type="button" class="btn btn-ghost" style="font-size:10px;padding:5px 10px"
+                onclick="toggleInlineUpdate('panel-{{ ass.id }}')">Cancel</button>
+            </div>
+          </form>
+        </div>
+        {% endif %}
+
+      </div><!-- .spot-card -->
+      {% endfor %}
+    </div><!-- .spot-grid -->
+
+    <!-- ── NEXT CAR QUEUE FOR THIS ZONE ── -->
+    {% if next_queue and loop.last %}
+    {# Show queue once at the bottom of the last zone #}
+    {% endif %}
+
+  </div><!-- .zone-section -->
+  {% endfor %}
+
+  <!-- ── NEXT CAR QUEUE (global — below all zones) ── -->
+  {% if next_queue %}
+  <div class="zone-queue" style="margin-top:8px;margin-bottom:28px">
+    <div class="zone-queue-head">Next Up — Scheduled Queue ({{ next_queue | length }} cars)</div>
+    <div class="queue-items">
+      {% for qi in next_queue[:6] %}
+      {% set qwo  = qi.wo %}
+      {% set qcar = qi.car %}
+      {% set qe   = qi.entry %}
+      <div class="queue-item">
+        <div>
+          <span class="qi-car">{{ qcar.full_id if qcar else '—' }}</span>
+          <span class="qi-sub">
+            {{ qwo.car.customer.name if qwo.car and qwo.car.customer else '—' }}
+            · Wk {{ qe.target_week or '?' }}
+          </span>
+          <!-- Warnings -->
+          {% if qi.warnings %}
+          <div class="warn-row" style="margin-top:3px">
+            {% for w in qi.warnings %}
+            <div class="warn-dot {{ w.level }}" title="{{ w.message }}"></div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <!-- Rev/hr -->
+        {% if qwo.rev_per_hour %}
+          {% set rph = qwo.rev_per_hour %}
+          <div class="qi-rph {% if rph >= 300 %}green{% elif rph >= 150 %}yellow{% else %}red{% endif %}">
+            ${{ rph }}/hr
+          </div>
+        {% else %}
+          <div class="qi-rph" style="color:var(--text-4)">—</div>
+        {% endif %}
+        <!-- Quick assign button -->
+        <button class="qi-assign-btn"
+          onclick="openAssign(null, 'Select Spot', {{ qwo.id }})">
+          Assign →
+        </button>
+      </div>
+      {% endfor %}
+      {% if next_queue | length > 6 %}
+      <div class="queue-item" style="color:var(--text-4);font-size:10px;font-family:'IBM Plex Mono',monospace">
+        +{{ next_queue | length - 6 }} more in schedule
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="zone-queue" style="margin-top:8px;margin-bottom:28px">
+    <div class="zone-queue-head">Next Up — Scheduled Queue</div>
+    <div class="queue-empty">No cars queued — add cars on the Schedule page</div>
+  </div>
+  {% endif %}
+
+</div><!-- .page -->
+
+<!-- ── ASSIGN MODAL ── -->
+<div class="modal-overlay" id="assign-modal">
+  <div class="modal">
+    <div class="modal-title">Assign Car to Spot — <span id="assign-spot-name" style="color:var(--accent)"></span></div>
+    <form method="POST" action="/shop-floor/assign">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="location_id" value="{{ location.id }}">
+      <input type="hidden" id="assign-spot-id">
+      <div class="form-group">
+        <label class="form-label">Spot <span style="color:var(--red)">*</span></label>
+        <select class="form-select" name="spot_id" id="assign-spot-select" required>
+          <option value="">— Select spot —</option>
+          {% for zone_name, zone in zones.items() %}
+            <optgroup label="{{ zone_name }}">
+              {% for sd in zone.spots %}
+              {% if not sd.assignment %}
+              <option value="{{ sd.spot.id }}">{{ sd.spot.name }}</option>
+              {% endif %}
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Work Order <span style="color:var(--red)">*</span></label>
+        <select class="form-select" name="wo_id" id="assign-wo-select" required>
+          <option value="">— Select car —</option>
+          {% for wo in available_wos %}
+          <option value="{{ wo.id }}">{{ wo.car.full_id }} — {{ wo.car.customer.name if wo.car.customer else '?' }} · {{ wo.status }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Scope Type</label>
+        <select class="form-select" name="sow_type">
+          <option value="">-- Select Scope --</option>
+          <option value="Bad Order">Bad Order</option>
+          <option value="Full Qualification">Full Qualification</option>
+          <option value="Partial Qualification">Partial Qualification</option>
+          <option value="Railroad Damage">Railroad Damage</option>
+          <option value="Lining Inspection">Lining Inspection</option>
+          <option value="Reline">Reline</option>
+          <option value="Cleaning">Cleaning</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Technician</label>
+        <input class="form-input" type="text" name="technician" placeholder="Name">
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Est. Hours</label>
+          <input class="form-input" type="number" name="estimated_hours" step="0.5" min="0" placeholder="0.0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Date</label>
+          <input class="form-input" type="date" name="target_date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" name="notes" placeholder="Any notes…"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="submit">Assign</button>
+        <button class="btn btn-ghost" type="button" onclick="closeModals()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleInlineUpdate(panelId) {
+  var panel = document.getElementById(panelId);
+  if (!panel) return;
+  var wasOpen = panel.classList.contains('open');
+  // Close all other panels first
+  document.querySelectorAll('.inline-update.open').forEach(function(p) {
+    p.classList.remove('open');
+  });
+  if (!wasOpen) {
+    panel.classList.add('open');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function toggleHoldField(select, holdId) {
+  var holdEl = document.getElementById(holdId);
+  if (!holdEl) return;
+  if (select.value === 'On Hold') {
+    holdEl.classList.add('visible');
+  } else {
+    holdEl.classList.remove('visible');
+  }
+}
+
+function openAssign(spotId, spotName, woId) {
+  // Pre-fill spot select if a specific spot was clicked
+  var spotSel = document.getElementById('assign-spot-select');
+  var spotHid = document.getElementById('assign-spot-id');
+  var woSel   = document.getElementById('assign-wo-select');
+
+  document.getElementById('assign-spot-name').textContent = spotName || 'Select Spot';
+
+  if (spotId) {
+    spotHid.value = spotId;
+    // Select matching option
+    for (var i = 0; i < spotSel.options.length; i++) {
+      if (parseInt(spotSel.options[i].value) === spotId) {
+        spotSel.selectedIndex = i;
+        break;
+      }
+    }
+  } else {
+    spotHid.value = '';
+    spotSel.selectedIndex = 0;
+  }
+
+  if (woId) {
+    for (var j = 0; j < woSel.options.length; j++) {
+      if (parseInt(woSel.options[j].value) === woId) {
+        woSel.selectedIndex = j;
+        break;
+      }
+    }
+  }
+
+  document.getElementById('assign-modal').classList.add('open');
+}
+
+function closeModals() {
+  document.querySelectorAll('.modal-overlay').forEach(function(el) {
+    el.classList.remove('open');
+  });
+}
+
+document.querySelectorAll('.modal-overlay').forEach(function(el) {
+  el.addEventListener('click', function(e) {
+    if (e.target === el) closeModals();
+  });
+});
+</script>
+{% endblock %}

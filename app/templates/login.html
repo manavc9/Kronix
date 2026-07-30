@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kronix — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #080a0d;
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── LEFT PANEL ── */
+.login-left {
+  width: 55%;
+  min-height: 100vh;
+  background: #080a0d;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 64px 72px;
+  overflow: hidden;
+  animation: fadeInLeft 0.6s ease both;
+}
+
+/* Grid background */
+.login-left::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
+  background-size: 52px 52px;
+  pointer-events: none;
+}
+
+/* Blue glow top-left */
+.login-left::after {
+  content: '';
+  position: absolute;
+  top: -180px;
+  left: -180px;
+  width: 560px;
+  height: 560px;
+  background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* Amber glow bottom-right */
+.glow-amber {
+  position: absolute;
+  bottom: -120px;
+  right: -80px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.left-content { position: relative; z-index: 1; }
+
+/* Logo */
+.brand-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 52px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  margin-bottom: 10px;
+  animation: logoPulse 4s ease-in-out infinite;
+}
+.logo-kron { color: #2563eb; }
+.logo-ix   { color: #f59e0b; }
+
+@keyframes logoPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.88; }
+}
+
+.brand-tagline {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 300;
+  color: #8a95a8;
+  line-height: 1.35;
+  margin-bottom: 52px;
+}
+.brand-tagline strong {
+  color: #e8edf5;
+  font-weight: 500;
+}
+
+/* Feature bullets */
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 64px;
+}
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.feature-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+  margin-top: 7px;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(37,99,235,0.6);
+}
+.feature-item:nth-child(2) .feature-dot { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.6); }
+.feature-item:nth-child(3) .feature-dot { background: #059669; box-shadow: 0 0 8px rgba(5,150,105,0.6); }
+.feature-text {
+  font-size: 14px;
+  color: #8a95a8;
+  line-height: 1.5;
+}
+.feature-text strong { color: #e8edf5; font-weight: 500; }
+
+/* Left footer */
+.left-footer {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: #2f3a52;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Vertical divider */
+.login-divider {
+  width: 1px;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    #1e2535 20%,
+    #263045 50%,
+    #1e2535 80%,
+    transparent 100%
+  );
+  flex-shrink: 0;
+}
+
+/* ── RIGHT PANEL ── */
+.login-right {
+  width: 45%;
+  min-height: 100vh;
+  background: #0d1117;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 52px;
+  overflow-y: auto;
+  animation: fadeInRight 0.6s ease both;
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.right-header {
+  margin-bottom: 32px;
+}
+.right-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e8edf5;
+  margin-bottom: 4px;
+}
+.right-sub {
+  font-size: 12px;
+  color: #4a5568;
+}
+
+/* Flash */
+.flash-msg {
+  background: rgba(245,158,11,0.07);
+  border-left: 3px solid #f59e0b;
+  border-radius: 5px;
+  padding: 10px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #f59e0b;
+  margin-bottom: 20px;
+}
+
+/* Role section */
+.role-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #2f3a52;
+  margin-bottom: 8px;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.role-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, #1e2535, transparent);
+}
+.role-section-label:first-of-type { margin-top: 0; }
+
+/* User list */
+.user-list { display: flex; flex-direction: column; gap: 5px; }
+
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: #151921;
+  border: 1px solid #1e2535;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.1s;
+  width: 100%;
+  text-align: left;
+}
+.user-btn:hover { transform: translateX(2px); }
+.user-btn:active { transform: translateX(0); }
+
+/* Role-specific hover colors */
+.user-btn.role-scheduler:hover {
+  border-color: rgba(37,99,235,0.45);
+  background: rgba(37,99,235,0.06);
+  box-shadow: 0 0 0 1px rgba(37,99,235,0.12), inset 3px 0 0 #2563eb;
+}
+.user-btn.role-cs:hover {
+  border-color: rgba(37,99,235,0.35);
+  background: rgba(37,99,235,0.05);
+  box-shadow: 0 0 0 1px rgba(37,99,235,0.1), inset 3px 0 0 rgba(37,99,235,0.7);
+}
+.user-btn.role-sm:hover {
+  border-color: rgba(245,158,11,0.4);
+  background: rgba(245,158,11,0.05);
+  box-shadow: 0 0 0 1px rgba(245,158,11,0.1), inset 3px 0 0 #f59e0b;
+}
+.user-btn.role-admin:hover {
+  border-color: rgba(124,58,237,0.4);
+  background: rgba(124,58,237,0.05);
+  box-shadow: 0 0 0 1px rgba(124,58,237,0.1), inset 3px 0 0 #7c3aed;
+}
+
+/* Avatar */
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.av-scheduler { background: rgba(37,99,235,0.14);  color: #2563eb; }
+.av-cs        { background: rgba(37,99,235,0.10);  color: #60a5fa; }
+.av-sm        { background: rgba(245,158,11,0.13); color: #f59e0b; }
+.av-admin     { background: rgba(124,58,237,0.13); color: #7c3aed; }
+
+.user-info { flex: 1; min-width: 0; }
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e8edf5;
+  margin-bottom: 1px;
+}
+.user-loc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: #4a5568;
+}
+
+/* Role tag */
+.user-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+.tag-scheduler { background: rgba(37,99,235,0.14);  color: #2563eb; }
+.tag-cs        { background: rgba(37,99,235,0.10);  color: #60a5fa; }
+.tag-sm        { background: rgba(245,158,11,0.13); color: #f59e0b; }
+.tag-admin     { background: rgba(124,58,237,0.13); color: #7c3aed; }
+
+/* ── MOBILE ── */
+@media (max-width: 780px) {
+  .login-left, .login-divider { display: none; }
+  .login-right { width: 100%; padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── LEFT PANEL ── -->
+<div class="login-left">
+  <div class="glow-amber"></div>
+  <div class="left-content">
+
+    <div class="brand-logo">
+      <span class="logo-kron">KRON</span><span class="logo-ix">IX</span>
+    </div>
+
+    <div class="brand-tagline">
+      <strong>Master time.</strong><br>
+      Command operations.
+    </div>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-dot"></div>
+        <div class="feature-text">
+          <strong>Real-time car tracking</strong> across all shop locations with live status updates and lifecycle visibility.
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dot"></div>
+        <div class="feature-text">
+          <strong>Intelligent action queues</strong> that surface what needs attention — estimates, approvals, dispositions.
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dot"></div>
+        <div class="feature-text">
+          <strong>Operations dashboard</strong> with throughput analytics, bottleneck detection, and billing pipeline.
+        </div>
+      </div>
+    </div>
+
+    <div class="left-footer">Rail Operations Intelligence &nbsp;·&nbsp; Internal Use Only</div>
+
+  </div>
+</div>
+
+<!-- ── DIVIDER ── -->
+<div class="login-divider"></div>
+
+<!-- ── RIGHT PANEL ── -->
+<div class="login-right">
+
+  <div class="right-header">
+    <div class="right-title">Select your profile</div>
+    <div class="right-sub">No password required for this environment</div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash-msg">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="/">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {% set schedulers = users | selectattr('role', 'equalto', 'Scheduler') | list %}
+    {% set cs_users   = users | selectattr('role', 'equalto', 'Customer Service') | list %}
+    {% set managers   = users | selectattr('role', 'equalto', 'Shop Manager') | list %}
+    {% set admins     = users | selectattr('role', 'equalto', 'Admin') | list %}
+
+    {% if schedulers %}
+    <div class="role-section-label">Scheduler</div>
+    <div class="user-list">
+      {% for u in schedulers %}
+      <button type="submit" name="user_id" value="{{ u.id }}" class="user-btn role-scheduler">
+        <div class="user-avatar av-scheduler">{{ u.name[:2].upper() }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ u.name }}</div>
+          <div class="user-loc">All locations</div>
+        </div>
+        <span class="user-tag tag-scheduler">Scheduler</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if cs_users %}
+    <div class="role-section-label">Customer Service</div>
+    <div class="user-list">
+      {% for u in cs_users %}
+      <button type="submit" name="user_id" value="{{ u.id }}" class="user-btn role-cs">
+        <div class="user-avatar av-cs">{{ u.name[:2].upper() }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ u.name }}</div>
+          <div class="user-loc">{% if u.location %}{{ u.location.name }}{% else %}All locations{% endif %}</div>
+        </div>
+        <span class="user-tag tag-cs">CS</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if managers %}
+    <div class="role-section-label">Shop Manager</div>
+    <div class="user-list">
+      {% for u in managers %}
+      <button type="submit" name="user_id" value="{{ u.id }}" class="user-btn role-sm">
+        <div class="user-avatar av-sm">{{ u.name[:2].upper() }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ u.name }}</div>
+          <div class="user-loc">{% if u.location %}{{ u.location.name }}{% else %}All locations{% endif %}</div>
+        </div>
+        <span class="user-tag tag-sm">Mgr</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if admins %}
+    <div class="role-section-label">Admin</div>
+    <div class="user-list">
+      {% for u in admins %}
+      <button type="submit" name="user_id" value="{{ u.id }}" class="user-btn role-admin">
+        <div class="user-avatar av-admin">{{ u.name[:2].upper() }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ u.name }}</div>
+          <div class="user-loc">All locations</div>
+        </div>
+        <span class="user-tag tag-admin">Admin</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </form>
+
+</div>
+<script>
+// Show loading state on user button click
+document.querySelectorAll('.user-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    // Brief delay to show state before form submits
+    var nameEl = this.querySelector('.user-name');
+    if (nameEl) {
+      var orig = nameEl.textContent;
+      nameEl.textContent = 'Signing in…';
+    }
+    this.style.opacity = '0.7';
+    this.style.pointerEvents = 'none';
+    // Restore after 3s in case something goes wrong
+    var self = this;
+    setTimeout(function() {
+      self.style.opacity = '';
+      self.style.pointerEvents = '';
+      if (nameEl) nameEl.textContent = orig;
+    }, 3000);
+  });
+});
+</script>
+</body>
+</html>

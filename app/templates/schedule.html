@@ -1,0 +1,806 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — Schedule{% endblock %}
+
+{% block extra_head %}
+{% set month_names = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+{% set prev_month = month - 1 if month > 1 else 12 %}
+{% set prev_year  = year if month > 1 else year - 1 %}
+{% set next_month = month + 1 if month < 12 else 1 %}
+{% set next_year  = year if month < 12 else year + 1 %}
+<style>
+/* ── TOP BAR ── */
+.sched-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.month-nav { display: flex; align-items: center; gap: 8px; }
+.month-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  padding: 6px 13px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: all 0.15s;
+  text-decoration: none;
+  display: inline-flex;
+}
+.month-btn:hover { border-color: var(--accent); color: var(--accent); }
+.month-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 160px;
+  text-align: center;
+}
+.view-toggle { display: flex; gap: 3px; }
+.view-btn {
+  padding: 5px 13px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.view-btn:hover { border-color: var(--accent); color: var(--accent); }
+.view-btn.active { background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.3); color: var(--accent); }
+
+/* ── TARGET BAR ── */
+.target-bar-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.target-section { flex: 1; min-width: 200px; }
+.target-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-4);
+  margin-bottom: 6px;
+}
+.target-nums {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.target-nums span { color: var(--text-3); font-weight: 400; }
+.target-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.target-fill  { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.target-fill.ok   { background: var(--green); }
+.target-fill.warn { background: var(--yellow); }
+.target-fill.over { background: var(--red); }
+.target-set-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 13px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.target-set-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── SERVICE MIX ── */
+.mix-row-outer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.mix-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 13px;
+  font-size: 11px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.mix-chip-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ── LAYOUT ── */
+.sched-layout {
+  display: grid;
+  grid-template-columns: 1fr 290px;
+  gap: 14px;
+  align-items: start;
+}
+
+/* ── WEEK GRID ── */
+.week-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+.week-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.week-head {
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.week-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.week-meta { font-size: 9px; color: var(--text-4); font-family: 'IBM Plex Mono', monospace; }
+.week-body { padding: 7px; display: flex; flex-direction: column; gap: 6px; }
+.week-empty { padding: 20px 8px; text-align: center; color: var(--text-4); font-size: 11px; }
+
+/* ── SCHEDULE CARD ── */
+.sched-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  transition: border-color 0.15s;
+  position: relative;
+}
+.sched-card:hover { border-color: var(--text-4); }
+.sched-car-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 2px;
+  text-decoration: none;
+}
+.sched-car-id:hover { text-decoration: underline; }
+.sched-customer { font-size: 10px; color: var(--text-3); margin-bottom: 6px; }
+.sched-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 5px; align-items: center; }
+.rph-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.rph-green  { background: rgba(0,230,118,0.13);  color: var(--green); }
+.rph-yellow { background: rgba(255,215,64,0.13); color: var(--yellow); }
+.rph-red    { background: rgba(255,82,82,0.13);  color: var(--red); }
+.parts-pill {
+  font-size: 9px;
+  font-family: 'IBM Plex Mono', monospace;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.parts-ok   { background: rgba(0,230,118,0.1);  color: var(--green); }
+.parts-warn { background: rgba(255,145,0,0.1);  color: var(--orange); }
+.parts-bad  { background: rgba(255,82,82,0.1);  color: var(--red); }
+.warn-dots { display: flex; gap: 3px; align-items: center; margin-top: 4px; }
+.warn-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+.warn-dot.red    { background: var(--red); }
+.warn-dot.orange { background: var(--orange); }
+.warn-dot.yellow { background: var(--yellow); }
+.warn-dot[title] { cursor: help; }
+.sched-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+  gap: 5px;
+}
+.sched-remove {
+  background: none;
+  border: none;
+  color: var(--text-4);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.1s;
+  line-height: 1;
+}
+.sched-remove:hover { color: var(--red); }
+.sched-status-sel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 5px;
+  color: var(--text-2);
+  font-size: 10px;
+  outline: none;
+  font-family: 'IBM Plex Sans', sans-serif;
+  cursor: pointer;
+  flex: 1;
+}
+
+/* ── PRIORITY QUEUE SIDEBAR ── */
+.side-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: sticky;
+  top: 72px;
+}
+.side-head {
+  padding: 11px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.side-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.side-sub { font-size: 10px; color: var(--text-4); margin-top: 3px; }
+.queue-list { max-height: 560px; overflow-y: auto; }
+.queue-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-sub);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.queue-item:last-child { border-bottom: none; }
+.queue-item:hover { background: rgba(0,212,255,0.02); }
+.queue-car-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.queue-meta { font-size: 10px; color: var(--text-3); }
+.queue-rph {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 4px;
+  text-align: right;
+}
+.queue-add-form { display: flex; gap: 4px; margin-top: 5px; }
+.queue-week-sel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 6px;
+  color: var(--text);
+  font-size: 10px;
+  outline: none;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+.queue-add-btn {
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.25);
+  border-radius: 3px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.queue-add-btn:hover { background: rgba(0,212,255,0.15); }
+
+/* ── GANTT VIEW ── */
+.gantt-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: auto;
+}
+.gantt-header {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.gantt-label-col {
+  width: 210px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-4);
+  border-right: 1px solid var(--border);
+}
+.gantt-timeline-header {
+  flex: 1;
+  position: relative;
+  height: 36px;
+}
+.gantt-day-marker {
+  position: absolute;
+  top: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--text-4);
+  transform: translateX(-50%);
+  padding-top: 10px;
+}
+.gantt-day-line {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--border-sub);
+  opacity: 0.5;
+}
+.gantt-today-line {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0.5;
+  z-index: 1;
+}
+.gantt-row {
+  display: flex;
+  border-bottom: 1px solid var(--border-sub);
+  min-height: 38px;
+}
+.gantt-row:last-child { border-bottom: none; }
+.gantt-row:hover { background: rgba(0,212,255,0.02); }
+.gantt-row-label {
+  width: 210px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.gantt-car { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: var(--accent); }
+.gantt-cust { font-size: 10px; color: var(--text-4); }
+.gantt-timeline-row {
+  flex: 1;
+  position: relative;
+  padding: 6px 0;
+}
+.gantt-bar {
+  position: absolute;
+  height: 22px;
+  border-radius: 3px;
+  top: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 7px;
+  font-size: 9px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  color: #000;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: default;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.gantt-bar:hover { opacity: 1; }
+.gantt-bar.status-green  { background: var(--green); }
+.gantt-bar.status-blue   { background: var(--accent); }
+.gantt-bar.status-yellow { background: var(--yellow); }
+.gantt-bar.status-orange { background: var(--orange); }
+.gantt-bar.status-red    { background: var(--red); }
+.gantt-bar.status-gray   { background: var(--text-3); color: var(--bg); }
+.gantt-bar.status-teal   { background: var(--teal); }
+
+@media (max-width: 1100px) { .sched-layout { grid-template-columns: 1fr; } .side-panel { position: static; } }
+@media (max-width: 800px)  { .week-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set month_names = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+{% set prev_month = month - 1 if month > 1 else 12 %}
+{% set prev_year  = year if month > 1 else year - 1 %}
+{% set next_month = month + 1 if month < 12 else 1 %}
+{% set next_year  = year if month < 12 else year + 1 %}
+
+<div class="page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Schedule — {{ location.name }}</div>
+      <div class="page-sub">{{ entries | length }} scheduled · {{ completed_count }} completed</div>
+    </div>
+    <div class="sched-top">
+      <div class="month-nav">
+        <a class="month-btn" href="/schedule?location_id={{ location.id }}&month={{ prev_month }}&year={{ prev_year }}&view={{ view }}">← Prev</a>
+        <div class="month-label">{{ month_names[month - 1] }} {{ year }}</div>
+        <a class="month-btn" href="/schedule?location_id={{ location.id }}&month={{ next_month }}&year={{ next_year }}&view={{ view }}">Next →</a>
+      </div>
+      <div class="view-toggle">
+        <a class="view-btn active" href="/schedule?location_id={{ location.id }}&month={{ month }}&year={{ year }}&view=board">Board</a>
+        <a class="view-btn" href="/schedule/gantt?location_id={{ location.id }}">Gantt →</a>
+      </div>
+    </div>
+  </div>
+
+  {% if not user.location_id %}
+  <div class="loc-tabs">
+    {% for loc in locations %}
+    <a class="loc-tab {% if loc.id == location.id %}active{% endif %}"
+       href="/schedule?location_id={{ loc.id }}&month={{ month }}&year={{ year }}&view={{ view }}">{{ loc.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Monthly target bar -->
+  <div class="target-bar-wrap">
+    <div class="target-section">
+      <div class="target-label">Cars Scheduled vs Target</div>
+      {% set car_count = entries | length %}
+      {% set car_target = target.car_target if target else 40 %}
+      {% set car_pct = [((car_count / car_target * 100) | round | int), 100] | min %}
+      <div class="target-nums">{{ car_count }} <span>/ {{ car_target }} cars — {{ car_pct }}%</span></div>
+      <div class="target-track">
+        <div class="target-fill {% if car_pct >= 100 %}ok{% elif car_pct >= 60 %}warn{% else %}warn{% endif %}"
+             style="width:{{ car_pct }}%"></div>
+      </div>
+    </div>
+    <div class="target-section">
+      <div class="target-label">Revenue vs Target</div>
+      {% set rev_target = target.revenue_target if target else 0 %}
+      {% set rev_pct = [((total_revenue / rev_target * 100) | round | int), 100] | min if rev_target > 0 else 0 %}
+      <div class="target-nums">${{ '{:,.0f}'.format(total_revenue) }} <span>/ ${{ '{:,.0f}'.format(rev_target) }} — {{ rev_pct }}%</span></div>
+      <div class="target-track">
+        <div class="target-fill {% if rev_pct >= 100 %}ok{% elif rev_pct >= 60 %}warn{% else %}warn{% endif %}"
+             style="width:{{ rev_pct }}%"></div>
+      </div>
+    </div>
+    <button class="target-set-btn" onclick="openTargetModal()">Set Target</button>
+  </div>
+
+  <!-- Service mix chips -->
+  {% if mix %}
+  <div class="mix-row-outer">
+    {% for cname, cnt in mix.items() | sort(attribute='1', reverse=True) %}
+    <div class="mix-chip"><span>{{ cname }}</span><span class="mix-chip-num">{{ cnt }}</span></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if view == 'gantt' %}
+  <!-- ══════════════════════════════════════════
+       GANTT VIEW
+       ══════════════════════════════════════════ -->
+  <div class="gantt-wrap">
+    <!-- Header row with day markers -->
+    <div class="gantt-header">
+      <div class="gantt-label-col">Car / Customer</div>
+      <div class="gantt-timeline-header" style="min-width:600px;position:relative">
+        <!-- Today line in header -->
+        <div class="gantt-today-line" style="left:{{ today_pct }}%"></div>
+        <!-- Day tick marks every 5 days -->
+        {% for d in range(1, days_in_month + 1, 5) %}
+        {% set pct = ((d - 1) / days_in_month * 100) | round(1) %}
+        <div class="gantt-day-marker" style="left:{{ pct }}%">{{ d }}</div>
+        <div class="gantt-day-line" style="left:{{ pct }}%"></div>
+        {% endfor %}
+      </div>
+    </div>
+    <!-- Gantt rows -->
+    {% for gd in gantt_data %}
+    {% set wo = gd.wo %}
+    {% set car = gd.car %}
+    {% set bar_color = get_status_color(wo.status) %}
+    <div class="gantt-row">
+      <div class="gantt-row-label">
+        <a class="gantt-car" href="/car/{{ wo.id }}">{{ car.full_id if car else '?' }}</a>
+        <div class="gantt-cust">{{ car.customer.name if car and car.customer else '—' }}</div>
+      </div>
+      <div class="gantt-timeline-row" style="min-width:600px;position:relative">
+        <!-- Today line -->
+        <div style="position:absolute;top:0;bottom:0;left:{{ today_pct }}%;width:1px;background:var(--accent);opacity:0.3;z-index:1"></div>
+        <div class="gantt-bar status-{{ bar_color }}"
+             style="left:{{ gd.start_pct }}%;width:{{ gd.width_pct }}%"
+             title="{{ car.full_id if car else '' }} · {{ wo.status }} · ${{ '{:,.0f}'.format(wo.estimated_revenue or 0) }}">
+          {{ car.full_id if car else '' }}
+          {% if gd.start_pct + gd.width_pct >= 99 %} →{% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty" style="padding:40px">No cars scheduled for {{ month_names[month-1] }} {{ year }}</div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- ══════════════════════════════════════════
+       BOARD VIEW (default)
+       ══════════════════════════════════════════ -->
+  <div class="sched-layout">
+
+    <!-- Week columns -->
+    <div>
+      {% set week_dates = [
+        (1, month_start),
+        (2, month_start),
+        (3, month_start),
+        (4, month_start),
+      ] %}
+      <div class="week-grid">
+        {% for week_num in [1, 2, 3, 4] %}
+        {% set we = weeks.get(week_num, []) %}
+        {% set week_rev = namespace(total=0) %}
+        {% for cd in we %}{% if cd.wo %}{% set week_rev.total = week_rev.total + (cd.wo.estimated_revenue or 0) %}{% endif %}{% endfor %}
+        <div class="week-col">
+          <div class="week-head">
+            <div class="week-label">Week {{ week_num }}</div>
+            <div class="week-meta">{{ we | length }} · ${{ '{:,.0f}'.format(week_rev.total) }}</div>
+          </div>
+          <div class="week-body">
+            {% if we %}
+              {% for cd in we %}
+              {% set entry = cd.entry %}
+              {% set wo = cd.wo %}
+              {% set car = cd.car %}
+              <div class="sched-card">
+                {% if wo and car %}
+                <a class="sched-car-id" href="/car/{{ wo.id }}">{{ car.full_id }}</a>
+                <div class="sched-customer">{{ car.customer.name if car.customer else '—' }}
+                  {% if wo.days_on_site is not none %} · <span style="color:{% if wo.days_on_site > 60 %}var(--red){% elif wo.days_on_site >= 30 %}var(--yellow){% else %}var(--green){% endif %}">{{ wo.days_on_site }}d</span>{% endif %}
+                </div>
+                <div class="sched-badges">
+                  {# Rev/Hr badge #}
+                  {% if wo.rev_per_hour > 0 %}
+                  <span class="rph-badge {% if wo.rev_per_hour >= 300 %}rph-green{% elif wo.rev_per_hour >= 150 %}rph-yellow{% else %}rph-red{% endif %}">
+                    ${{ '%.0f' | format(wo.rev_per_hour) }}/hr
+                  </span>
+                  {% endif %}
+                  {# WO status badge #}
+                  {% set sc = get_status_color(wo.status) %}
+                  <span class="badge badge-{{ sc }}" style="font-size:8px;padding:1px 6px">{{ wo.status }}</span>
+                  {# Parts pill #}
+                  {% if wo.parts_status %}
+                  <span class="parts-pill {% if wo.parts_status == 'Available' %}parts-ok{% elif wo.parts_status in ('Ordered','Waiting ETA') %}parts-bad{% else %}parts-warn{% endif %}">
+                    {{ wo.parts_status }}
+                  </span>
+                  {% endif %}
+                </div>
+                {# Warning dots #}
+                {% if cd.warnings %}
+                <div class="warn-dots">
+                  {% for w in cd.warnings %}
+                  <div class="warn-dot {{ w.level }}" title="{{ w.message }}"></div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+                <div class="sched-bottom">
+                  <form method="POST" action="/schedule/update/{{ entry.id }}" style="flex:1;display:flex;gap:4px">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="location_id" value="{{ location.id }}">
+                    <input type="hidden" name="target_week" value="{{ entry.target_week }}">
+                    <select class="sched-status-sel" name="schedule_status" onchange="this.form.submit()">
+                      {% for s in ['Scheduled','In Progress','Completed','Pushed to Next Month','On Hold'] %}
+                      <option value="{{ s }}" {% if entry.schedule_status == s %}selected{% endif %}>{{ s }}</option>
+                      {% endfor %}
+                    </select>
+                  </form>
+                  <form method="POST" action="/schedule/remove/{{ entry.id }}" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="sched-remove" type="submit" title="Remove from schedule"
+                            onclick="return confirm('Remove {{ car.full_id if car else 'this car' }} from schedule?')">✕</button>
+                  </form>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="week-empty">No cars scheduled</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Priority queue sidebar -->
+    <div class="side-panel">
+      <div class="side-head">
+        <div class="side-title">Unscheduled — Priority</div>
+        <div class="side-sub">Sorted by rev/hr · highest first</div>
+      </div>
+      <div class="queue-list">
+        {% if unscheduled_data %}
+          {% for qd in unscheduled_data %}
+          {% set wo = qd.wo %}
+          {% set car = qd.car %}
+          <div class="queue-item">
+            <div style="flex:1;min-width:0">
+              <div class="queue-car-id">{{ car.full_id if car else '?' }}</div>
+              <div class="queue-meta">{{ car.customer.name if car and car.customer else '—' }}
+                {% if wo.days_on_site is not none %} · {{ wo.days_on_site }}d{% endif %}
+              </div>
+              {% if wo.parts_status %}
+              <span class="parts-pill {% if wo.parts_status == 'Available' %}parts-ok{% elif wo.parts_status in ('Ordered','Waiting ETA') %}parts-bad{% else %}parts-warn{% endif %}" style="margin-top:3px;display:inline-block">
+                {{ wo.parts_status }}
+              </span>
+              {% endif %}
+              {% if wo.cleaning_required and not wo.cleaning_completed %}
+              <div style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;
+                          padding:2px 7px;border-radius:3px;font-size:9px;font-weight:600;
+                          font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;
+                          background:var(--red-dim);color:var(--red);border:1px solid rgba(220,38,38,0.35)">
+                ⚠ CLEANING REQ'D
+              </div>
+              {% endif %}
+              {% if qd.warnings %}
+              <div class="warn-dots" style="margin-top:3px">
+                {% for w in qd.warnings %}<div class="warn-dot {{ w.level }}" title="{{ w.message }}"></div>{% endfor %}
+              </div>
+              {% endif %}
+              <form method="POST" action="/schedule/add" class="queue-add-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="location_id" value="{{ location.id }}">
+                <input type="hidden" name="month" value="{{ month }}">
+                <input type="hidden" name="year" value="{{ year }}">
+                <input type="hidden" name="wo_id" value="{{ wo.id }}">
+                <select class="queue-week-sel" name="target_week">
+                  {% for wk in [1,2,3,4] %}<option value="{{ wk }}">Wk {{ wk }}</option>{% endfor %}
+                </select>
+                <button class="queue-add-btn" type="submit">+ Add</button>
+              </form>
+            </div>
+            <div style="flex-shrink:0;text-align:right">
+              {% if wo.rev_per_hour > 0 %}
+              <div class="queue-rph {% if wo.rev_per_hour >= 300 %}rph-green{% elif wo.rev_per_hour >= 150 %}rph-yellow{% else %}rph-red{% endif %} rph-badge" style="font-size:13px;padding:3px 8px">
+                ${{ '%.0f' | format(wo.rev_per_hour) }}<span style="font-size:9px">/hr</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty" style="padding:28px">All active cars are scheduled</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── SET TARGET MODAL ── -->
+<div class="modal-overlay" id="target-modal">
+  <div class="modal">
+    <div class="modal-title">Set Monthly Target — {{ month_names[month - 1] }} {{ year }}</div>
+    <form method="POST" action="/schedule/set-target">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="location_id" value="{{ location.id }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Car Target</label>
+          <input class="form-input" type="number" name="car_target" min="1"
+                 value="{{ target.car_target if target else 40 }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Revenue Target ($)</label>
+          <input class="form-input" type="number" name="revenue_target" step="1000" min="0"
+                 value="{{ target.revenue_target | int if target else 0 }}">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="submit">Save Target</button>
+        <button class="btn btn-ghost" type="button" onclick="closeModals()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── ADD TO SCHEDULE MODAL (from sidebar + button) ── -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">Add to Schedule — <span id="add-car-id" style="color:var(--accent)"></span></div>
+    <form method="POST" action="/schedule/add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="location_id" value="{{ location.id }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="wo_id" id="add-wo-id">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Target Week <span style="color:var(--red)">*</span></label>
+          <select class="form-select" name="target_week" required>
+            <option value="1">Week 1</option>
+            <option value="2">Week 2</option>
+            <option value="3">Week 3</option>
+            <option value="4">Week 4</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Date</label>
+          <input class="form-input" type="date" name="target_date">
+        </div>
+        <div class="form-group span2">
+          <label class="form-label">Notes</label>
+          <textarea class="form-textarea" name="notes" placeholder="Any scheduling notes…" style="min-height:60px"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="submit">Add to Schedule</button>
+        <button class="btn btn-ghost" type="button" onclick="closeModals()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openTargetModal() {
+  document.getElementById('target-modal').classList.add('open');
+}
+function openAdd(woId, carId) {
+  document.getElementById('add-wo-id').value = woId;
+  document.getElementById('add-car-id').textContent = carId;
+  document.getElementById('add-modal').classList.add('open');
+}
+function closeModals() {
+  document.querySelectorAll('.modal-overlay').forEach(function(el) {
+    el.classList.remove('open');
+  });
+}
+document.querySelectorAll('.modal-overlay').forEach(function(el) {
+  el.addEventListener('click', function(e) { if (e.target === el) closeModals(); });
+});
+</script>
+{% endblock %}

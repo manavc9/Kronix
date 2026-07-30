@@ -1,0 +1,1206 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — {{ car.full_id }}{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── CAR HERO HEADER ── */
+.car-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.car-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+}
+.car-hero-main { flex: 1; min-width: 0; }
+.car-id-big {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.car-meta {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.car-meta-item { font-size: 12px; color: var(--text-2); }
+.car-meta-item strong { color: var(--text); font-weight: 500; }
+.car-chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.car-hero-right {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.wo-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(0,212,255,0.08);
+  color: var(--accent);
+  border: 1px solid rgba(0,212,255,0.25);
+}
+.completion-block { width: 180px; }
+.completion-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-3);
+  margin-bottom: 5px;
+}
+.completion-pct { font-family: 'IBM Plex Mono', monospace; color: var(--accent); }
+
+/* ── OVERDUE BANNER ── */
+.overdue-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,82,82,0.07);
+  border: 1px solid rgba(255,82,82,0.3);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 12px;
+  color: var(--red);
+}
+
+/* ── BREADCRUMB ── */
+.breadcrumb {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.breadcrumb a { color: var(--accent); }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb-sep { color: var(--text-4); }
+
+/* ── UPDATE FORM ── */
+.update-form { display: none; }
+.update-form.open { display: block; }
+.form-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0 0 10px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.form-section-label.cs    { color: var(--accent); }
+.form-section-label.sched { color: var(--green); }
+.form-section-label.post  { color: var(--blue); }
+
+/* ── MILESTONE TIMELINE ── */
+.timeline-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.timeline-col { display: flex; flex-direction: column; }
+.timeline-col-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-3);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--border) 0%, var(--border-sub) 100%);
+}
+.t-step {
+  position: relative;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.t-step:last-child { margin-bottom: 0; }
+.t-node {
+  position: absolute;
+  left: -28px;
+  top: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+  border: 2px solid;
+  background: var(--bg);
+  transition: all 0.2s;
+}
+.t-node.done {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(0,230,118,0.08);
+  box-shadow: 0 0 8px rgba(0,230,118,0.2);
+}
+.t-node.pending {
+  border-color: var(--border);
+  color: var(--text-4);
+}
+.t-node.current {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,212,255,0.08);
+  box-shadow: 0 0 8px rgba(0,212,255,0.2);
+}
+.t-label { font-size: 11px; color: var(--text-3); margin-bottom: 2px; }
+.t-date {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+}
+.t-pending {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-4);
+}
+
+/* ── SPOT INFO ── */
+.spot-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-sub);
+  font-size: 12px;
+}
+.spot-info-row:last-child { border-bottom: none; }
+.spot-info-label { color: var(--text-3); }
+.spot-info-val { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text); }
+
+/* ── VISIT LIST ── */
+.visit-list { display: flex; flex-direction: column; gap: 6px; }
+.visit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.visit-item:hover { border-color: var(--accent); }
+.visit-item.current { border-color: var(--accent); background: rgba(0,212,255,0.05); }
+.visit-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-3); }
+.visit-date { font-size: 11px; color: var(--text-2); }
+.visit-status { margin-left: auto; }
+
+/* ── COMMENTS ── */
+.comment-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-sub);
+}
+.comment-item:last-child { border-bottom: none; }
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.comment-author { font-size: 12px; font-weight: 500; color: var(--text); }
+.comment-role {
+  font-size: 9px;
+  color: var(--text-3);
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.comment-time { font-size: 10px; color: var(--text-4); margin-left: auto; font-family: 'IBM Plex Mono', monospace; }
+.comment-body { font-size: 12px; color: var(--text-2); line-height: 1.65; }
+
+/* ── ACTIVITY LOG ── */
+.log-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-sub);
+}
+.log-item:last-child { border-bottom: none; }
+.log-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); margin-top: 5px; flex-shrink: 0; }
+.log-text { font-size: 11px; color: var(--text-3); flex: 1; line-height: 1.6; }
+.log-text strong { color: var(--text-2); font-weight: 500; }
+.log-time { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-4); white-space: nowrap; }
+
+/* ── COLLAPSIBLE SECTIONS ── */
+.coll-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 16px;
+}
+.coll-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.coll-head:hover { background: var(--surface-2); }
+.coll-head-left { display: flex; align-items: center; gap: 12px; }
+.coll-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+}
+.coll-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+.coll-badge.active { color: var(--accent); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.06); }
+.coll-arrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-4);
+  transition: transform 0.2s;
+}
+.coll-arrow.open { transform: rotate(90deg); }
+.coll-body {
+  display: none;
+  padding: 18px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+.coll-body.open { display: block; }
+
+/* Parts pill */
+.parts-pill-lg {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+.parts-ok   { background: rgba(0,230,118,0.1);  color: var(--green);  border: 1px solid rgba(0,230,118,0.25); }
+.parts-warn { background: rgba(255,152,0,0.1);  color: var(--orange); border: 1px solid rgba(255,152,0,0.25); }
+.parts-bad  { background: rgba(255,82,82,0.1);  color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
+
+/* BP hours table */
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.bp-table th {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-4);
+  text-align: left;
+  padding: 0 0 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.bp-table td {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-sub);
+  color: var(--text-2);
+  vertical-align: middle;
+}
+.bp-table tr:last-child td { border-bottom: none; }
+.bp-table td:last-child {
+  width: 130px;
+}
+.bp-total-row td {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  color: var(--accent);
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .timeline-split { grid-template-columns: 1fr; }
+  .car-hero { flex-direction: column; }
+  .car-hero-right { align-items: flex-start; }
+  .completion-block { width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width:1260px">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="/dashboard">Dashboard</a>
+    <span class="breadcrumb-sep">›</span>
+    <a href="/car-tracking">Car Tracking</a>
+    <span class="breadcrumb-sep">›</span>
+    <span>{{ car.full_id }}</span>
+  </div>
+
+  <!-- Overdue banner -->
+  {% if wo.is_overdue %}
+  <div class="overdue-banner">
+    <span style="font-size:16px">⚠</span>
+    <span>This car is <strong>{{ wo.days_overdue }} days overdue</strong> — projected outbound was {{ wo.projected_outbound.strftime('%B %d, %Y') }}</span>
+  </div>
+  {% endif %}
+
+  <!-- Car hero header -->
+  <div class="car-hero">
+    <div class="car-hero-main">
+      <div class="car-id-big">{{ car.full_id }}</div>
+      <div class="car-meta">
+        <div class="car-meta-item"><strong>Customer:</strong> {{ car.customer.name if car.customer else '—' }}</div>
+        <div class="car-meta-item"><strong>Commodity:</strong> {{ car.commodity or '—' }}</div>
+        <div class="car-meta-item"><strong>Purpose:</strong> {{ wo.purpose or '—' }}</div>
+        <div class="car-meta-item"><strong>Priority:</strong>
+          {% if wo.priority == 1 %}<span style="color:var(--red)">Critical</span>
+          {% elif wo.priority == 2 %}<span style="color:var(--orange)">High</span>
+          {% elif wo.priority == 3 %}Normal
+          {% else %}<span style="color:var(--text-3)">Low</span>{% endif %}
+        </div>
+        <div class="car-meta-item"><strong>Visit:</strong> #{{ wo.visit_number }} of {{ car.visit_count }}</div>
+        {% if wo.current_owner %}
+        <div class="car-meta-item"><strong>Owner:</strong> {{ wo.current_owner }}</div>
+        {% endif %}
+      </div>
+      <div class="car-chips">
+        {% set color = get_status_color(wo.status) %}
+        <span class="badge badge-{{ color }}" style="font-size:11px;padding:4px 12px">{{ wo.status }}</span>
+        {% if wo.days_on_site is not none %}
+        <span class="badge {% if wo.aging_level == 'critical' %}badge-red{% elif wo.aging_level == 'warning' %}badge-amber{% else %}badge-gray{% endif %}">
+          {{ wo.days_on_site }}d on site
+        </span>
+        {% endif %}
+        {% if wo.rev_per_hour > 0 %}
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--yellow);background:rgba(255,215,64,0.08);padding:3px 10px;border-radius:4px">${{ wo.rev_per_hour }}/hr</span>
+        {% endif %}
+      </div>
+      {% if wo.reason_shopped %}
+      <div style="margin-top:12px;font-size:12px;color:var(--text-2)">
+        <span style="color:var(--text-3)">Reason:</span> {{ wo.reason_shopped }}
+      </div>
+      {% endif %}
+      {% if wo.scope_of_work %}
+      <div style="margin-top:4px;font-size:12px;color:var(--text-2)">
+        <span style="color:var(--text-3)">SOW:</span> {{ wo.scope_of_work }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="car-hero-right">
+      <div class="wo-badge">Work Order #{{ wo.id }}</div>
+      <div class="completion-block">
+        <div class="completion-label">
+          <span>Lifecycle</span>
+          <span class="completion-pct">{{ wo.completion_percentage }}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill {% if wo.completion_percentage >= 80 %}high{% elif wo.completion_percentage >= 40 %}mid{% else %}low{% endif %}"
+               style="width:{{ wo.completion_percentage }}%"></div>
+        </div>
+      </div>
+      {% if wo.projected_outbound %}
+      <div style="font-size:11px;color:var(--text-3);text-align:right">
+        Projected outbound<br>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:{% if wo.is_overdue %}var(--red){% else %}var(--text){% endif %}">
+          {{ wo.projected_outbound.strftime('%b %d, %Y') }}
+        </span>
+      </div>
+      {% endif %}
+      {% if car.lifetime_revenue > 0 %}
+      <div style="font-size:11px;color:var(--text-3);text-align:right">
+        Lifetime revenue<br>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--green)">${{ '{:,.0f}'.format(car.lifetime_revenue) }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Update form toggle — Admin/Scheduler can always edit, even closed WOs -->
+  {% if not wo.is_closed or user.role in ('Scheduler', 'Admin') %}
+  <div style="margin-bottom:18px;display:flex;gap:10px">
+    <button class="btn btn-primary" onclick="toggleUpdate()">✎ Update Dates &amp; Status</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('comment-section').scrollIntoView({behavior:'smooth'})">💬 Add Comment</button>
+    {% if wo.is_closed %}
+    <span style="font-size:11px;color:var(--yellow);align-self:center;font-family:'IBM Plex Mono',monospace">⚠ Editing closed WO</span>
+    {% endif %}
+  </div>
+
+  <div class="card update-form" id="updateForm">
+    <div class="card-head">
+      <span class="card-title">Update Work Order #{{ wo.id }}</span>
+      <button class="btn btn-ghost btn-sm" onclick="toggleUpdate()">Cancel</button>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="/car/{{ wo.id }}/update">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_section" value="main">
+
+        {% if user.role in ('Customer Service', 'Scheduler', 'Admin') %}
+        <div class="form-section-label cs">— Customer Service Dates</div>
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="form-group">
+            <label class="form-label">Date Arrived</label>
+            <input class="form-input" type="date" name="date_arrived" value="{{ wo.date_arrived.strftime('%Y-%m-%d') if wo.date_arrived else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shopping Pkg Received</label>
+            <input class="form-input" type="date" name="shopping_pkg_received" value="{{ wo.shopping_pkg_received.strftime('%Y-%m-%d') if wo.shopping_pkg_received else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Inbound Inspection</label>
+            <input class="form-input" type="date" name="inbound_inspection" value="{{ wo.inbound_inspection.strftime('%Y-%m-%d') if wo.inbound_inspection else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estimate Sent</label>
+            <input class="form-input" type="date" name="estimate_sent" value="{{ wo.estimate_sent.strftime('%Y-%m-%d') if wo.estimate_sent else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estimate Approved</label>
+            <input class="form-input" type="date" name="estimate_approved" value="{{ wo.estimate_approved.strftime('%Y-%m-%d') if wo.estimate_approved else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Work Order Created</label>
+            <input class="form-input" type="date" name="work_order_created" value="{{ wo.work_order_created.strftime('%Y-%m-%d') if wo.work_order_created else '' }}">
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user.role in ('Scheduler', 'Admin') %}
+        <div class="form-section-label sched">— Scheduler Dates</div>
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="form-group">
+            <label class="form-label">Cleaning Scheduled</label>
+            <input class="form-input" type="date" name="cleaning_scheduled" value="{{ wo.cleaning_scheduled.strftime('%Y-%m-%d') if wo.cleaning_scheduled else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cleaning Completed</label>
+            <input class="form-input" type="date" name="cleaning_completed" value="{{ wo.cleaning_completed.strftime('%Y-%m-%d') if wo.cleaning_completed else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Repair Start Date</label>
+            <input class="form-input" type="date" name="repair_start_date" value="{{ wo.repair_start_date.strftime('%Y-%m-%d') if wo.repair_start_date else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Repair Completed</label>
+            <input class="form-input" type="date" name="repair_completed_date" value="{{ wo.repair_completed_date.strftime('%Y-%m-%d') if wo.repair_completed_date else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Projected Outbound</label>
+            <input class="form-input" type="date" name="projected_outbound" value="{{ wo.projected_outbound.strftime('%Y-%m-%d') if wo.projected_outbound else '' }}">
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user.role in ('Customer Service', 'Scheduler', 'Admin') %}
+        <div class="form-section-label post">— Post-Repair Dates</div>
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="form-group">
+            <label class="form-label">Outbound Inspection</label>
+            <input class="form-input" type="date" name="outbound_inspection" value="{{ wo.outbound_inspection.strftime('%Y-%m-%d') if wo.outbound_inspection else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dispo Requested</label>
+            <input class="form-input" type="date" name="dispo_requested" value="{{ wo.dispo_requested.strftime('%Y-%m-%d') if wo.dispo_requested else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dispo Received</label>
+            <input class="form-input" type="date" name="dispo_received" value="{{ wo.dispo_received.strftime('%Y-%m-%d') if wo.dispo_received else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Billed Out</label>
+            <input class="form-input" type="date" name="billed_out" value="{{ wo.billed_out.strftime('%Y-%m-%d') if wo.billed_out else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Final Estimate Sent</label>
+            <input class="form-input" type="date" name="final_estimate_sent" value="{{ wo.final_estimate_sent.strftime('%Y-%m-%d') if wo.final_estimate_sent else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Final Estimate Approved</label>
+            <input class="form-input" type="date" name="final_estimate_approved" value="{{ wo.final_estimate_approved.strftime('%Y-%m-%d') if wo.final_estimate_approved else '' }}">
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="form-section-label" style="color:var(--purple)">— Car Details</div>
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="form-group">
+            <label class="form-label">Car Type</label>
+            <select class="form-select" name="car_type">
+              <option value="">— Select —</option>
+              {% for ct in ['Tank Car','Pressure Car','Hopper','Gondola','Boxcar','Flatcar','Other'] %}
+              <option value="{{ ct }}" {% if wo.car_type == ct %}selected{% endif %}>{{ ct }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:12px;padding-top:26px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-2)">
+              <input type="checkbox" name="cleaning_required" value="on"
+                     {% if wo.cleaning_required %}checked{% endif %}
+                     style="width:15px;height:15px;accent-color:var(--accent)">
+              Cleaning Required
+            </label>
+          </div>
+        </div>
+
+        <div class="form-section-label" style="color:var(--text-3)">— Work Order Fields</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+              {% for s in ['To Arrive','Arrived','Waiting Inspection','Waiting Estimate',
+                           'Waiting Approval','Waiting Work Order','Work Order Created',
+                           'Waiting Cleaning','Cleaned','Waiting Repair','Waiting Material',
+                           'In Repair','Repair Complete','Waiting Outbound Inspection',
+                           'Waiting Dispo','Dispo Received','Ready to Bill','Billed',
+                           'Completed','On Hold','Cancelled'] %}
+              <option value="{{ s }}" {% if wo.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose</label>
+            <select class="form-select" name="purpose">
+              <option value="">-- Select Purpose --</option>
+              {% for p in ['Bad Order','Full Qualification','Partial Qualification','Railroad Damage','Lining Inspection','Reline','Cleaning'] %}
+              <option value="{{ p }}" {% if wo.purpose == p %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Est. Revenue ($)</label>
+            <input class="form-input" type="number" name="estimated_revenue" value="{{ wo.estimated_revenue or '' }}" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Est. Hours</label>
+            <input class="form-input" type="number" name="estimated_hours" value="{{ wo.estimated_hours or '' }}" step="0.5">
+          </div>
+          <div class="form-group span3">
+            <label class="form-label">Scope of Work</label>
+            <textarea class="form-textarea" name="scope_of_work">{{ wo.scope_of_work or '' }}</textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-ghost" onclick="toggleUpdate()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}<!-- end update form -->
+
+  <!-- ── MILESTONE TIMELINE ── -->
+  <div class="timeline-split">
+
+    <!-- Pre-repair -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head"><span class="card-title">Pre-Repair Lifecycle</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          {% set pre_steps = [
+            ('Date Arrived',          wo.date_arrived),
+            ('Shopping Pkg Received', wo.shopping_pkg_received),
+            ('Inbound Inspection',    wo.inbound_inspection),
+            ('Estimate Sent',         wo.estimate_sent),
+            ('Estimate Approved',     wo.estimate_approved),
+            ('Work Order Created',    wo.work_order_created),
+            ('Cleaning Scheduled',    wo.cleaning_scheduled),
+            ('Cleaning Completed',    wo.cleaning_completed),
+            ('Repair Start',          wo.repair_start_date),
+          ] %}
+          {% for label, d in pre_steps %}
+          <div class="t-step">
+            <div class="t-node {% if d %}done{% else %}pending{% endif %}">
+              {% if d %}✓{% else %}○{% endif %}
+            </div>
+            <div class="t-label">{{ label }}</div>
+            {% if d %}
+              <div class="t-date">{{ d.strftime('%b %d, %Y') }}</div>
+            {% else %}
+              <div class="t-pending">Pending</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Post-repair -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head"><span class="card-title">Post-Repair &amp; Billing</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          {% set post_steps = [
+            ('Repair Completed',         wo.repair_completed_date),
+            ('Outbound Inspection',      wo.outbound_inspection),
+            ('Dispo Requested',          wo.dispo_requested),
+            ('Dispo Received',           wo.dispo_received),
+            ('Final Estimate Sent',      wo.final_estimate_sent),
+            ('Final Estimate Approved',  wo.final_estimate_approved),
+            ('Billed Out',               wo.billed_out),
+          ] %}
+          {% for label, d in post_steps %}
+          <div class="t-step">
+            <div class="t-node {% if d %}done{% else %}pending{% endif %}">
+              {% if d %}✓{% else %}○{% endif %}
+            </div>
+            <div class="t-label">{{ label }}</div>
+            {% if d %}
+              <div class="t-date">{{ d.strftime('%b %d, %Y') }}</div>
+            {% else %}
+              <div class="t-pending">Pending</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── PARTS & MATERIALS ── -->
+  <div class="coll-section">
+    <div class="coll-head" onclick="toggleColl('parts-body', 'parts-arrow')">
+      <div class="coll-head-left">
+        <span class="coll-title">Parts &amp; Materials</span>
+        {% if wo.parts_status and wo.parts_status != 'Unknown' %}
+          {% if wo.parts_status == 'Available' %}
+          <span class="coll-badge active">{{ wo.parts_status }}</span>
+          {% else %}
+          <span class="coll-badge" style="color:var(--orange);border-color:rgba(255,152,0,0.3)">{{ wo.parts_status }}</span>
+          {% endif %}
+        {% else %}
+          <span class="coll-badge">Unknown</span>
+        {% endif %}
+      </div>
+      <span class="coll-arrow" id="parts-arrow">›</span>
+    </div>
+    <div class="coll-body" id="parts-body">
+      {% if not wo.is_closed or user.role in ('Scheduler', 'Admin') %}
+      <form method="POST" action="/car/{{ wo.id }}/update">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_section" value="parts">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Parts Status</label>
+            <select class="form-select" name="parts_status">
+              {% for s in ['Unknown','Available','Partially Available','Ordered','Waiting ETA'] %}
+              <option value="{{ s }}" {% if wo.parts_status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Parts ETA</label>
+            <input class="form-input" type="date" name="parts_eta"
+                   value="{{ wo.parts_eta.strftime('%Y-%m-%d') if wo.parts_eta else '' }}">
+          </div>
+          <div class="form-group span3">
+            <label class="form-label">Parts Notes</label>
+            <textarea class="form-textarea" name="parts_notes"
+                      placeholder="Part numbers, supplier info, status notes…">{{ wo.parts_notes or '' }}</textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Save Parts Info</button>
+      </form>
+      {% else %}
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:3px">Status</div>
+          {% if wo.parts_status == 'Available' %}
+          <span class="parts-pill-lg parts-ok">{{ wo.parts_status }}</span>
+          {% elif wo.parts_status in ('Ordered','Waiting ETA') %}
+          <span class="parts-pill-lg parts-bad">{{ wo.parts_status }}</span>
+          {% else %}
+          <span class="parts-pill-lg parts-warn">{{ wo.parts_status or 'Unknown' }}</span>
+          {% endif %}
+        </div>
+        {% if wo.parts_eta %}
+        <div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:3px">ETA</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text)">{{ wo.parts_eta.strftime('%b %d, %Y') }}</div>
+        </div>
+        {% endif %}
+        {% if wo.parts_notes %}
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:3px">Notes</div>
+          <div style="font-size:12px;color:var(--text-2);line-height:1.5">{{ wo.parts_notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── REWORK ── -->
+  <div class="coll-section">
+    <div class="coll-head" onclick="toggleColl('rework-body', 'rework-arrow')">
+      <div class="coll-head-left">
+        <span class="coll-title">Rework</span>
+        {% if wo.rework_required %}
+          {% if wo.rework_passed %}
+          <span class="coll-badge" style="color:var(--green);border-color:rgba(0,230,118,0.3)">Passed</span>
+          {% else %}
+          <span class="coll-badge" style="color:var(--red);border-color:rgba(255,82,82,0.3)">Required</span>
+          {% endif %}
+        {% else %}
+          <span class="coll-badge">Not Required</span>
+        {% endif %}
+      </div>
+      <span class="coll-arrow" id="rework-arrow">›</span>
+    </div>
+    <div class="coll-body" id="rework-body">
+      {% if not wo.is_closed or user.role in ('Scheduler', 'Admin') %}
+      <form method="POST" action="/car/{{ wo.id }}/update">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_section" value="rework">
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:22px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-2)">
+              <input type="checkbox" name="rework_required" value="on"
+                     {% if wo.rework_required %}checked{% endif %}
+                     style="width:15px;height:15px;accent-color:var(--accent)"
+                     id="rework-req-chk" onchange="toggleReworkFields()">
+              Rework Required
+            </label>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:22px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-2)">
+              <input type="checkbox" name="rework_passed" value="on"
+                     {% if wo.rework_passed %}checked{% endif %}
+                     style="width:15px;height:15px;accent-color:var(--green)">
+              Rework Passed
+            </label>
+          </div>
+        </div>
+        <div id="rework-extra" {% if not wo.rework_required %}style="display:none"{% endif %}>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Rework Date</label>
+              <input class="form-input" type="date" name="rework_date"
+                     value="{{ wo.rework_date.strftime('%Y-%m-%d') if wo.rework_date else '' }}">
+            </div>
+            <div class="form-group span3">
+              <label class="form-label">Rework Notes</label>
+              <textarea class="form-textarea" name="rework_notes"
+                        placeholder="Describe what needs rework…">{{ wo.rework_notes or '' }}</textarea>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Save Rework Info</button>
+      </form>
+      {% else %}
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+        <div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">Required</div>
+          <span class="badge {% if wo.rework_required %}badge-red{% else %}badge-gray{% endif %}">
+            {{ 'Yes' if wo.rework_required else 'No' }}
+          </span>
+        </div>
+        {% if wo.rework_required %}
+        <div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">Passed</div>
+          <span class="badge {% if wo.rework_passed %}badge-green{% else %}badge-gray{% endif %}">
+            {{ 'Yes' if wo.rework_passed else 'Pending' }}
+          </span>
+        </div>
+        {% if wo.rework_date %}
+        <div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">Date</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text)">{{ wo.rework_date.strftime('%b %d, %Y') }}</div>
+        </div>
+        {% endif %}
+        {% if wo.rework_notes %}
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">Notes</div>
+          <div style="font-size:12px;color:var(--text-2);line-height:1.5">{{ wo.rework_notes }}</div>
+        </div>
+        {% endif %}
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── BLAST & PAINT ── -->
+  <div class="coll-section">
+    <div class="coll-head" onclick="toggleColl('bp-body', 'bp-arrow')">
+      <div class="coll-head-left">
+        <span class="coll-title">Blast &amp; Paint</span>
+        {% if wo.blast_paint_required %}
+          {% set bp_total = (wo.bp_blast_hrs or 0) + (wo.bp_interior_coating_hrs or 0) + (wo.bp_lining_touchup_hrs or 0) + (wo.bp_buff_lining_hrs or 0) + (wo.bp_paint_booth_hrs or 0) %}
+          <span class="coll-badge active">{{ '%.1f' | format(bp_total) }}h logged</span>
+        {% else %}
+          <span class="coll-badge">Not Required</span>
+        {% endif %}
+      </div>
+      <span class="coll-arrow" id="bp-arrow">›</span>
+    </div>
+    <div class="coll-body" id="bp-body">
+      {% if not wo.is_closed or user.role in ('Scheduler', 'Admin') %}
+      <form method="POST" action="/car/{{ wo.id }}/update">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_section" value="bp">
+        <div class="form-group" style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-2)">
+            <input type="checkbox" name="blast_paint_required" value="on"
+                   {% if wo.blast_paint_required %}checked{% endif %}
+                   style="width:15px;height:15px;accent-color:var(--accent)"
+                   id="bp-req-chk" onchange="toggleBPFields()">
+            Blast &amp; Paint Required
+          </label>
+        </div>
+        <div id="bp-extra" {% if not wo.blast_paint_required %}style="display:none"{% endif %}>
+          <table class="bp-table">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th style="width:130px">Hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Blast</td>
+                <td><input class="form-input" type="number" name="bp_blast_hrs"
+                    style="padding:4px 8px;font-size:11px"
+                    step="0.5" min="0"
+                    value="{{ wo.bp_blast_hrs or '' }}"
+                    placeholder="0.0"
+                    oninput="updateBPTotal()"></td>
+              </tr>
+              <tr>
+                <td>Interior Coating</td>
+                <td><input class="form-input" type="number" name="bp_interior_coating_hrs"
+                    style="padding:4px 8px;font-size:11px"
+                    step="0.5" min="0"
+                    value="{{ wo.bp_interior_coating_hrs or '' }}"
+                    placeholder="0.0"
+                    oninput="updateBPTotal()"></td>
+              </tr>
+              <tr>
+                <td>Lining Touch-up</td>
+                <td><input class="form-input" type="number" name="bp_lining_touchup_hrs"
+                    style="padding:4px 8px;font-size:11px"
+                    step="0.5" min="0"
+                    value="{{ wo.bp_lining_touchup_hrs or '' }}"
+                    placeholder="0.0"
+                    oninput="updateBPTotal()"></td>
+              </tr>
+              <tr>
+                <td>Buff Lining</td>
+                <td><input class="form-input" type="number" name="bp_buff_lining_hrs"
+                    style="padding:4px 8px;font-size:11px"
+                    step="0.5" min="0"
+                    value="{{ wo.bp_buff_lining_hrs or '' }}"
+                    placeholder="0.0"
+                    oninput="updateBPTotal()"></td>
+              </tr>
+              <tr>
+                <td>Paint Booth</td>
+                <td><input class="form-input" type="number" name="bp_paint_booth_hrs"
+                    style="padding:4px 8px;font-size:11px"
+                    step="0.5" min="0"
+                    value="{{ wo.bp_paint_booth_hrs or '' }}"
+                    placeholder="0.0"
+                    oninput="updateBPTotal()"></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="bp-total-row">
+                <td>Total Hours</td>
+                <td id="bp-total-display" style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent)">
+                  {{ '%.1f' | format((wo.bp_blast_hrs or 0) + (wo.bp_interior_coating_hrs or 0) + (wo.bp_lining_touchup_hrs or 0) + (wo.bp_buff_lining_hrs or 0) + (wo.bp_paint_booth_hrs or 0)) }}h
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          <div class="form-group">
+            <label class="form-label">Blast &amp; Paint Notes</label>
+            <textarea class="form-textarea" name="bp_notes"
+                      placeholder="Coating type, product numbers, special instructions…">{{ wo.bp_notes or '' }}</textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Save Blast &amp; Paint Info</button>
+      </form>
+      {% else %}
+      {% set bp_total = (wo.bp_blast_hrs or 0) + (wo.bp_interior_coating_hrs or 0) + (wo.bp_lining_touchup_hrs or 0) + (wo.bp_buff_lining_hrs or 0) + (wo.bp_paint_booth_hrs or 0) %}
+      {% if wo.blast_paint_required %}
+      <table class="bp-table">
+        <thead><tr><th>Task</th><th>Hours</th></tr></thead>
+        <tbody>
+          <tr><td>Blast</td><td style="font-family:'IBM Plex Mono',monospace">{{ '%.1f' | format(wo.bp_blast_hrs or 0) }}h</td></tr>
+          <tr><td>Interior Coating</td><td style="font-family:'IBM Plex Mono',monospace">{{ '%.1f' | format(wo.bp_interior_coating_hrs or 0) }}h</td></tr>
+          <tr><td>Lining Touch-up</td><td style="font-family:'IBM Plex Mono',monospace">{{ '%.1f' | format(wo.bp_lining_touchup_hrs or 0) }}h</td></tr>
+          <tr><td>Buff Lining</td><td style="font-family:'IBM Plex Mono',monospace">{{ '%.1f' | format(wo.bp_buff_lining_hrs or 0) }}h</td></tr>
+          <tr><td>Paint Booth</td><td style="font-family:'IBM Plex Mono',monospace">{{ '%.1f' | format(wo.bp_paint_booth_hrs or 0) }}h</td></tr>
+        </tbody>
+        <tfoot>
+          <tr class="bp-total-row">
+            <td>Total</td>
+            <td>{{ '%.1f' | format(bp_total) }}h</td>
+          </tr>
+        </tfoot>
+      </table>
+      {% if wo.bp_notes %}
+      <div style="font-size:12px;color:var(--text-2);line-height:1.5;margin-top:10px">{{ wo.bp_notes }}</div>
+      {% endif %}
+      {% else %}
+      <div class="empty">Blast &amp; Paint not required for this work order</div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── SPOT + VISIT HISTORY ── -->
+  <div class="two-col" style="margin-top:16px">
+
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head"><span class="card-title">Current Shop Spot</span></div>
+      <div class="card-body">
+        {% if spot_assign %}
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--yellow);margin-bottom:12px">
+            {{ spot_assign.spot.name }}
+          </div>
+          {% set acolor = get_status_color(spot_assign.status) %}
+          <span class="badge badge-{{ acolor }}" style="margin-bottom:14px;display:inline-flex">{{ spot_assign.status }}</span>
+          <div>
+            <div class="spot-info-row"><span class="spot-info-label">SOW Type</span><span class="spot-info-val">{{ spot_assign.sow_type or '—' }}</span></div>
+            <div class="spot-info-row"><span class="spot-info-label">Technician</span><span class="spot-info-val">{{ spot_assign.technician or '—' }}</span></div>
+            <div class="spot-info-row"><span class="spot-info-label">Est. Hours</span><span class="spot-info-val">{{ spot_assign.estimated_hours }}</span></div>
+            <div class="spot-info-row"><span class="spot-info-label">Actual Hours</span><span class="spot-info-val">{{ spot_assign.actual_hours }}</span></div>
+            <div class="spot-info-row"><span class="spot-info-label">Target Date</span><span class="spot-info-val">{{ spot_assign.target_date.strftime('%b %d') if spot_assign.target_date else '—' }}</span></div>
+            <div class="spot-info-row"><span class="spot-info-label">Days in Spot</span><span class="spot-info-val">{{ spot_assign.days_in_spot }}d</span></div>
+          </div>
+          <div style="margin-top:14px">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);margin-bottom:5px">
+              <span>Progress</span>
+              <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">{{ spot_assign.pct_complete }}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill {% if spot_assign.pct_complete >= 80 %}high{% elif spot_assign.pct_complete >= 40 %}mid{% else %}low{% endif %}"
+                   style="width:{{ spot_assign.pct_complete }}%"></div>
+            </div>
+          </div>
+          {% if spot_assign.hold_reason %}
+          <div style="margin-top:12px;padding:10px 12px;background:rgba(255,82,82,0.07);border:1px solid rgba(255,82,82,0.2);border-radius:var(--radius-sm);font-size:11px;color:var(--red)">
+            Hold: {{ spot_assign.hold_reason }}
+          </div>
+          {% endif %}
+          {% if spot_assign.notes %}
+          <div style="margin-top:10px;font-size:11px;color:var(--text-3);line-height:1.5">{{ spot_assign.notes }}</div>
+          {% endif %}
+        {% else %}
+          <div class="empty">Not currently in a shop spot</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head">
+        <span class="card-title">Visit History</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-4)">{{ car.visit_count }} visit{{ 's' if car.visit_count != 1 }}</span>
+      </div>
+      <div class="card-body">
+        <div class="visit-list">
+          {% for visit in all_visits %}
+          <a href="/car/{{ visit.id }}" class="visit-item {% if visit.id == wo.id %}current{% endif %}">
+            <div>
+              <div class="visit-num">Visit #{{ visit.visit_number }}</div>
+              <div class="visit-date">
+                {{ visit.date_arrived.strftime('%b %d, %Y') if visit.date_arrived else 'No arrival date' }}
+                {% if visit.purpose %} · {{ visit.purpose }}{% endif %}
+              </div>
+            </div>
+            <div class="visit-status">
+              {% set vc = get_status_color(visit.status) %}
+              <span class="badge badge-{{ vc }}">{{ visit.status }}</span>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── COMMENTS ── -->
+  <div class="card" id="comment-section" style="margin-top:16px">
+    <div class="card-head">
+      <span class="card-title">Comments</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-4)">{{ comments | length }}</span>
+    </div>
+    <div class="card-body">
+      {% if not wo.is_closed %}
+      <form method="POST" action="/car/{{ wo.id }}/comment" style="margin-bottom:18px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group" style="margin-bottom:10px">
+          <textarea class="form-textarea" name="body" placeholder="Add a note or update…" style="min-height:80px"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Post Comment</button>
+      </form>
+      <hr class="divider">
+      {% endif %}
+
+      {% if comments %}
+        {% for comment in comments %}
+        <div class="comment-item">
+          <div class="comment-meta">
+            <span class="comment-author">{{ comment.author }}</span>
+            <span class="comment-role">{{ comment.role }}</span>
+            <span class="comment-time">{{ comment.created_at.strftime('%b %d, %Y %H:%M') }}</span>
+          </div>
+          <div class="comment-body">{{ comment.body }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">No comments yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── ACTIVITY LOG ── -->
+  <div class="card">
+    <div class="card-head"><span class="card-title">Activity Log</span></div>
+    <div class="card-body">
+      {% if activity %}
+        {% for log in activity %}
+        <div class="log-item">
+          <div class="log-dot"></div>
+          <div class="log-text">
+            <strong>{{ log.user }}</strong> ({{ log.role }}) — {{ log.action }}
+            {% if log.field_name and log.new_value %}
+              · {{ log.field_name }}: <span style="color:var(--green)">{{ log.new_value }}</span>
+              {% if log.old_value %}<span style="color:var(--text-4)"> (was {{ log.old_value }})</span>{% endif %}
+            {% endif %}
+          </div>
+          <div class="log-time">{{ log.created_at.strftime('%b %d %H:%M') }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">No activity recorded yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleUpdate() {
+  const form = document.getElementById('updateForm');
+  form.classList.toggle('open');
+  if (form.classList.contains('open')) {
+    setTimeout(function() {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+// After a successful save, flash messages appear — scroll back to top
+(function() {
+  var flash = document.querySelector('.flash, .flash-message');
+  if (flash) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+})();
+
+function toggleColl(bodyId, arrowId) {
+  var body  = document.getElementById(bodyId);
+  var arrow = document.getElementById(arrowId);
+  if (!body) return;
+  body.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open');
+}
+
+function toggleReworkFields() {
+  var chk   = document.getElementById('rework-req-chk');
+  var extra = document.getElementById('rework-extra');
+  if (!extra) return;
+  extra.style.display = chk && chk.checked ? '' : 'none';
+}
+
+function toggleBPFields() {
+  var chk   = document.getElementById('bp-req-chk');
+  var extra = document.getElementById('bp-extra');
+  if (!extra) return;
+  extra.style.display = chk && chk.checked ? '' : 'none';
+}
+
+function updateBPTotal() {
+  var fields = ['bp_blast_hrs','bp_interior_coating_hrs',
+                'bp_lining_touchup_hrs','bp_buff_lining_hrs',
+                'bp_paint_booth_hrs'];
+  var total = 0;
+  fields.forEach(function(name) {
+    var el = document.querySelector('input[name="' + name + '"]');
+    if (el && el.value) total += parseFloat(el.value) || 0;
+  });
+  var disp = document.getElementById('bp-total-display');
+  if (disp) disp.textContent = total.toFixed(1) + 'h';
+}
+</script>
+{% endblock %}

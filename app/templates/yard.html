@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — Yard{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── RAILRX SECTION ── */
+.railrx-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  opacity: 0.45;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.railrx-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.railrx-badge {
+  font-size: 9px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(90,98,120,0.2);
+  color: var(--text-4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.railrx-sub { font-size: 11px; color: var(--text-4); margin-left: auto; }
+
+/* ── STAT PILLS — clickable filter ── */
+.stat-pill[data-filter] {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.stat-pill[data-filter]:hover { border-color: var(--accent); }
+.stat-pill[data-filter].active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+}
+
+/* ── TABLE CONTROLS ── */
+.table-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.tc-search {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 11px;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  outline: none;
+  width: 220px;
+  transition: border-color 0.15s;
+}
+.tc-search:focus { border-color: var(--accent); }
+.tc-search::placeholder { color: var(--text-4); }
+.tc-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  color: var(--text-2);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.tc-select:focus { border-color: var(--accent); }
+.tc-clear {
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  margin-left: 4px;
+}
+.tc-clear:hover { text-decoration: underline; }
+.tc-count {
+  margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* ── INLINE STATUS EDIT ── */
+.status-cell { position: relative; }
+.status-badge-wrap { display: flex; align-items: center; gap: 5px; }
+.status-edit-btn {
+  font-size: 9px;
+  color: var(--text-4);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: none;
+  background: none;
+  transition: color 0.1s;
+  line-height: 1;
+}
+.status-edit-btn:hover { color: var(--accent); }
+.inline-status-form {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+.is-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
+  color: var(--text);
+  font-size: 11px;
+  outline: none;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: border-color 0.15s;
+  max-width: 170px;
+}
+.is-select:focus { border-color: var(--accent); }
+.is-ok {
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.is-ok:hover { background: rgba(0,212,255,0.2); }
+.is-cancel {
+  background: none;
+  border: none;
+  color: var(--text-4);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color 0.1s;
+}
+.is-cancel:hover { color: var(--red); }
+
+/* ── ACTION BUTTONS ── */
+.action-row { display: flex; gap: 5px; flex-wrap: nowrap; align-items: center; }
+.act-btn {
+  font-size: 10px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text-2);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.act-btn:hover        { border-color: var(--accent); color: var(--accent); }
+.act-btn.act-bill     { border-color: rgba(0,230,118,0.3); color: var(--green); }
+.act-btn.act-bill:hover { background: rgba(0,230,118,0.08); }
+.act-btn.act-out      { border-color: rgba(255,145,0,0.3); color: var(--orange); }
+.act-btn.act-out:hover { background: rgba(255,145,0,0.08); }
+.act-btn.act-remove   { border-color: rgba(255,82,82,0.2); color: var(--text-3); }
+.act-btn.act-remove:hover { border-color: var(--red); color: var(--red); background: rgba(255,82,82,0.07); }
+
+/* ── EDIT MODAL EXTRA ── */
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Yard — {{ location.name }}</div>
+      <div class="page-sub">{{ yard_stats.total }} car{{ 's' if yard_stats.total != 1 }} active — auto-populated from open work orders</div>
+    </div>
+  </div>
+
+  {% if not user.location_id %}
+  <div class="loc-tabs">
+    {% for loc in locations %}
+    <a class="loc-tab {% if loc.id == location.id %}active{% endif %}"
+       href="/yard?location_id={{ loc.id }}">{{ loc.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Clickable stat strip -->
+  <div class="stat-strip">
+    <div class="stat-pill" data-filter="all" onclick="filterYard('all', this)">
+      <div class="stat-pill-num">{{ yard_stats.total }}</div>
+      <div class="stat-pill-label">Total in Yard</div>
+    </div>
+    <div class="stat-pill c-blue" data-filter="to-arrive" onclick="filterYard('to-arrive', this)">
+      <div class="stat-pill-num">{{ yard_stats.to_arrive }}</div>
+      <div class="stat-pill-label">To Arrive</div>
+    </div>
+    <div class="stat-pill c-green" data-filter="ready-to-bill" onclick="filterYard('ready-to-bill', this)">
+      <div class="stat-pill-num">{{ yard_stats.ready_to_bill }}</div>
+      <div class="stat-pill-label">Ready to Bill</div>
+    </div>
+    <div class="stat-pill c-yellow">
+      <div class="stat-pill-num">{{ yard_stats.billed_month }}</div>
+      <div class="stat-pill-label">Billed This Month</div>
+    </div>
+  </div>
+
+  <!-- RailRX placeholder -->
+  <div class="railrx-wrap">
+    <div class="railrx-title">RailRX Import</div>
+    <span class="railrx-badge">Coming Soon</span>
+    <div class="railrx-sub">Upload a RailRX report to auto-populate yard entries from interchange data.</div>
+  </div>
+
+  <!-- Table controls -->
+  <div class="table-controls">
+    <input class="tc-search" id="yard-search" type="text"
+           placeholder="Search car ID or customer…" oninput="applyFilters()">
+    <select class="tc-select" id="yard-sort" onchange="applyFilters()">
+      <option value="">Sort: Default</option>
+      <option value="customer">Sort: Customer A–Z</option>
+      <option value="date-asc">Sort: Arrival Date ↑</option>
+      <option value="date-desc">Sort: Arrival Date ↓</option>
+      <option value="days">Sort: Days on Site</option>
+      <option value="ystatus">Sort: Yard Status</option>
+    </select>
+    <span class="tc-clear" id="filter-clear" style="display:none" onclick="clearFilters()">× Clear filter</span>
+    <span class="tc-count" id="row-count"></span>
+  </div>
+
+  <!-- Yard table -->
+  <div class="table-wrap">
+    <table class="data-table" id="yard-table">
+      <thead>
+        <tr>
+          <th>Car ID</th>
+          <th>Customer</th>
+          <th>Arrival Date</th>
+          <th>Days on Site</th>
+          <th>WO Status</th>
+          <th>Yard Status</th>
+          <th>Return Location</th>
+          <th>Billed Out</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="yard-tbody">
+        {% for cd in yard_cars %}
+        {% set yc = cd.yard_car %}
+        {% set wo = cd.wo %}
+        {% set car = cd.car %}
+        {% set ys_filter = yc.yard_status | lower | replace(' ', '-') %}
+        <tr data-filter="{{ ys_filter }}"
+            data-carid="{{ car.full_id if car else '' }}"
+            data-customer="{{ wo.car.customer.name if wo and wo.car and wo.car.customer else '' }}"
+            data-date-arrived="{{ wo.date_arrived.isoformat() if wo and wo.date_arrived else '' }}"
+            data-days="{{ wo.days_on_site or 0 }}"
+            data-ystatus="{{ yc.yard_status }}">
+
+          <!-- Car ID -->
+          <td>
+            {% if wo %}
+            <a class="car-id" href="/car/{{ wo.id }}">{{ car.full_id if car else '—' }}</a>
+            {% else %}—{% endif %}
+          </td>
+
+          <!-- Customer -->
+          <td class="strong">{{ wo.car.customer.name if wo and wo.car and wo.car.customer else '—' }}</td>
+
+          <!-- Arrival Date -->
+          <td class="mono" style="color:var(--text-2)">
+            {{ wo.date_arrived.strftime('%b %d, %Y') if wo and wo.date_arrived else '—' }}
+          </td>
+
+          <!-- Days on Site -->
+          <td>
+            {% if wo and wo.days_on_site is not none %}
+            {% set d = wo.days_on_site %}
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+              color:{% if d > 60 %}var(--red){% elif d >= 30 %}var(--yellow){% else %}var(--green){% endif %}">
+              {{ d }}d
+            </span>
+            {% else %}—{% endif %}
+          </td>
+
+          <!-- WO Status (inline editable) -->
+          <td class="status-cell" id="wo-cell-{{ yc.id }}">
+            <div class="status-badge-wrap" id="wo-badge-{{ yc.id }}">
+              {% if wo %}
+              {% set wcolor = get_status_color(wo.status) %}
+              <span class="badge badge-{{ wcolor }}">{{ wo.status }}</span>
+              <button class="status-edit-btn" onclick="showStatusForm('wo', {{ yc.id }})" title="Edit">✎</button>
+              {% else %}—{% endif %}
+            </div>
+            <form class="inline-status-form" id="wo-form-{{ yc.id }}" style="display:none"
+                  method="POST" action="/yard/update-status/{{ yc.id }}">
+              <input type="hidden" name="location_id" value="{{ location.id }}">
+              <select class="is-select" name="wo_status">
+                {% for s in wo_statuses %}
+                <option value="{{ s }}" {% if wo and wo.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+              <button class="is-ok" type="submit">✓</button>
+              <button class="is-cancel" type="button" onclick="hideStatusForm('wo', {{ yc.id }})">✕</button>
+            </form>
+          </td>
+
+          <!-- Yard Status (inline editable) -->
+          <td class="status-cell" id="ys-cell-{{ yc.id }}">
+            {% set ys_color = {'To Arrive':'gray','Arrived':'blue','In Yard':'blue','Ready to Bill':'green','Billed':'green'} %}
+            <div class="status-badge-wrap" id="ys-badge-{{ yc.id }}">
+              <span class="badge badge-{{ ys_color.get(yc.yard_status, 'gray') }}">{{ yc.yard_status }}</span>
+              <button class="status-edit-btn" onclick="showStatusForm('ys', {{ yc.id }})" title="Edit">✎</button>
+            </div>
+            <form class="inline-status-form" id="ys-form-{{ yc.id }}" style="display:none"
+                  method="POST" action="/yard/update-status/{{ yc.id }}">
+              <input type="hidden" name="location_id" value="{{ location.id }}">
+              <select class="is-select" name="yard_status">
+                {% for s in ['To Arrive', 'Waiting Inspection', 'Waiting Cleaning', 'In Yard', 'In Yard Repair', 'Ready to Bill'] %}
+                <option value="{{ s }}" {% if yc.yard_status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+              <button class="is-ok" type="submit">✓</button>
+              <button class="is-cancel" type="button" onclick="hideStatusForm('ys', {{ yc.id }})">✕</button>
+            </form>
+          </td>
+
+          <!-- Return Location -->
+          <td class="mono" style="color:var(--text-2);font-size:11px">{{ yc.return_location or '—' }}</td>
+
+          <!-- Billed Out -->
+          <td class="mono" style="color:var(--text-3);font-size:11px">
+            {{ wo.billed_out.strftime('%b %d, %Y') if wo and wo.billed_out else '—' }}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="action-row">
+              <button class="act-btn"
+                onclick="openEdit({{ yc.id }}, '{{ (yc.return_location or '')|replace("'","\\'")|replace('"','\\"') }}', '{{ (yc.sow_notes or '')|replace("'","\\'")|replace('"','\\"') }}', '{{ (yc.comments or '')|replace("'","\\'")|replace('"','\\"') }}')">Edit</button>
+
+              {% if yc.yard_status not in ('Ready to Bill',) %}
+              <form method="POST" action="/yard/ready-bill/{{ yc.id }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="location_id" value="{{ location.id }}">
+                <button class="act-btn act-bill" type="submit">Ready to Bill</button>
+              </form>
+              {% endif %}
+
+              <button class="act-btn act-out"
+                onclick="openBillOut({{ yc.id }}, '{{ car.full_id if car else 'this car' }}', '{{ (yc.return_location or '')|replace("'","\\'")|replace('"','\\"') }}')">Bill Out</button>
+
+              <form method="POST" action="/yard/remove/{{ yc.id }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="location_id" value="{{ location.id }}">
+                <button class="act-btn act-remove" type="submit"
+                  onclick="return confirm('Remove this car from the yard view?')" title="Remove">✕</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr id="empty-row"><td colspan="9" class="empty">No open work orders for this location</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ── EDIT MODAL (notes/return location only) ── -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">Edit Yard Entry</div>
+    <form method="POST" id="edit-form" action="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="location_id" value="{{ location.id }}">
+      <div class="edit-grid">
+        <div class="form-group">
+          <label class="form-label">Return Location</label>
+          <input class="form-input" type="text" name="return_location" id="edit-return-loc"
+                 placeholder="e.g. CN Winnipeg…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">SOW Notes</label>
+          <input class="form-input" type="text" name="sow_notes" id="edit-sow">
+        </div>
+        <div class="form-group span2">
+          <label class="form-label">Comments</label>
+          <input class="form-input" type="text" name="comments" id="edit-comments">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-ghost" type="button" onclick="closeModals()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── BILL OUT MODAL ── -->
+<div class="modal-overlay" id="bill-out-modal">
+  <div class="modal">
+    <div class="modal-title">Bill Out — <span id="bo-car-label" style="color:var(--accent)"></span></div>
+    <form method="POST" id="bill-out-form" action="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="location_id" value="{{ location.id }}">
+      <div class="edit-grid">
+        <div class="form-group">
+          <label class="form-label">Billed Out Date <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="date" name="billed_out_date" id="bo-date" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Return Location</label>
+          <input class="form-input" type="text" name="return_location" id="bo-return-loc"
+                 placeholder="e.g. CN Winnipeg…">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="submit">Confirm Bill Out</button>
+        <button class="btn btn-ghost" type="button" onclick="closeModals()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/* ── INLINE STATUS EDIT ── */
+function showStatusForm(type, ycId) {
+  document.getElementById(type + '-badge-' + ycId).style.display = 'none';
+  document.getElementById(type + '-form-'  + ycId).style.display = 'flex';
+}
+function hideStatusForm(type, ycId) {
+  document.getElementById(type + '-badge-' + ycId).style.display = 'flex';
+  document.getElementById(type + '-form-'  + ycId).style.display = 'none';
+}
+
+/* ── EDIT MODAL ── */
+function openEdit(ycId, returnLoc, sow, comments) {
+  document.getElementById('edit-form').action = '/yard/update/' + ycId;
+  document.getElementById('edit-return-loc').value = returnLoc;
+  document.getElementById('edit-sow').value         = sow;
+  document.getElementById('edit-comments').value    = comments;
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+/* ── BILL OUT MODAL ── */
+function openBillOut(ycId, carLabel, returnLoc) {
+  document.getElementById('bill-out-form').action  = '/yard/bill-out/' + ycId;
+  document.getElementById('bo-car-label').textContent = carLabel;
+  document.getElementById('bo-date').value         = new Date().toISOString().slice(0, 10);
+  document.getElementById('bo-return-loc').value   = returnLoc;
+  document.getElementById('bill-out-modal').classList.add('open');
+}
+
+/* ── CLOSE MODALS ── */
+function closeModals() {
+  document.querySelectorAll('.modal-overlay').forEach(function(el) {
+    el.classList.remove('open');
+  });
+}
+document.querySelectorAll('.modal-overlay').forEach(function(el) {
+  el.addEventListener('click', function(e) { if (e.target === el) closeModals(); });
+});
+
+/* ── STAT CARD FILTERING ── */
+var activeFilter = 'all';
+
+function filterYard(filter, el) {
+  activeFilter = (activeFilter === filter && filter !== 'all') ? 'all' : filter;
+  document.querySelectorAll('.stat-pill[data-filter]').forEach(function(p) {
+    p.classList.toggle('active', p.dataset.filter === activeFilter && activeFilter !== 'all');
+  });
+  applyFilters();
+}
+
+/* ── SEARCH + SORT ── */
+function applyFilters() {
+  var search = document.getElementById('yard-search').value.toLowerCase().trim();
+  var sort   = document.getElementById('yard-sort').value;
+
+  var allRows = Array.from(document.querySelectorAll('#yard-tbody tr[data-filter]'));
+  var visCount = 0;
+
+  allRows.forEach(function(row) {
+    var ysFilter   = row.dataset.filter || '';
+    var matchFilter = activeFilter === 'all' || ysFilter === activeFilter;
+    var matchSearch = !search
+      || row.dataset.carid.toLowerCase().includes(search)
+      || row.dataset.customer.toLowerCase().includes(search);
+    var show = matchFilter && matchSearch;
+    row.style.display = show ? '' : 'none';
+    if (show) visCount++;
+  });
+
+  // Sort visible rows
+  if (sort) {
+    var tbody = document.getElementById('yard-tbody');
+    var visible = allRows.filter(function(r) { return r.style.display !== 'none'; });
+    visible.sort(function(a, b) {
+      if (sort === 'customer')   return a.dataset.customer.localeCompare(b.dataset.customer);
+      if (sort === 'date-asc')   return (a.dataset.dateArrived || '').localeCompare(b.dataset.dateArrived || '');
+      if (sort === 'date-desc')  return (b.dataset.dateArrived || '').localeCompare(a.dataset.dateArrived || '');
+      if (sort === 'days')       return parseInt(b.dataset.days || 0) - parseInt(a.dataset.days || 0);
+      if (sort === 'ystatus')    return a.dataset.ystatus.localeCompare(b.dataset.ystatus);
+      return 0;
+    });
+    visible.forEach(function(row) { tbody.appendChild(row); });
+  }
+
+  // Update count and clear link
+  document.getElementById('row-count').textContent = visCount + ' car' + (visCount !== 1 ? 's' : '');
+  var hasClear = activeFilter !== 'all' || search;
+  document.getElementById('filter-clear').style.display = hasClear ? '' : 'none';
+}
+
+function clearFilters() {
+  activeFilter = 'all';
+  document.getElementById('yard-search').value = '';
+  document.getElementById('yard-sort').value   = '';
+  document.querySelectorAll('.stat-pill[data-filter]').forEach(function(p) {
+    p.classList.remove('active');
+  });
+  applyFilters();
+}
+
+// Init count on load
+applyFilters();
+
+// Sortable columns (skip Actions at index 8)
+makeTableSortable('yard-table', [0,1,2,3,4,5,6,7], 'yard-tbody');
+</script>
+{% endblock %}

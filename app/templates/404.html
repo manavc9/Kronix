@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kronix — Page Not Found</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #080a0d;
+  color: #e8edf5;
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+a { color: inherit; text-decoration: none; }
+
+.err-wrap {
+  padding: 40px 32px;
+  max-width: 480px;
+}
+
+.err-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 40px;
+}
+.err-logo .logo-kron { color: #2563eb; }
+.err-logo .logo-ix   { color: #f59e0b; }
+
+.err-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 96px;
+  font-weight: 600;
+  color: #1e2535;
+  line-height: 1;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.err-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #e8edf5;
+  margin-bottom: 12px;
+}
+
+.err-desc {
+  font-size: 13px;
+  color: #4a5568;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.err-path {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #2563eb;
+  background: rgba(37,99,235,0.10);
+  border: 1px solid rgba(37,99,235,0.2);
+  border-radius: 5px;
+  padding: 6px 12px;
+  display: inline-block;
+  margin-bottom: 32px;
+}
+
+.err-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 22px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.err-btn:hover { background: #1d4ed8; color: #fff; }
+
+.err-divider {
+  border: none;
+  border-top: 1px solid #1e2535;
+  margin: 32px 0;
+}
+
+.err-links {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-size: 12px;
+  color: #4a5568;
+}
+.err-links a { color: #8a95a8; transition: color 0.15s; }
+.err-links a:hover { color: #e8edf5; }
+</style>
+</head>
+<body>
+<div class="err-wrap">
+  <div class="err-logo">
+    <span class="logo-kron">KRON</span><span class="logo-ix">IX</span>
+  </div>
+
+  <div class="err-code">404</div>
+  <div class="err-title">Page Not Found</div>
+  <div class="err-desc">
+    The page you're looking for doesn't exist or has been moved.
+    Double-check the URL or navigate back to the dashboard.
+  </div>
+
+  <a class="err-btn" href="/dashboard">
+    ← Go to Dashboard
+  </a>
+
+  <hr class="err-divider">
+
+  <div class="err-links">
+    <a href="/car-tracking">Car Tracking</a>
+    <a href="/history">History</a>
+    <a href="/yard">Yard</a>
+    <a href="/logout">Sign Out</a>
+  </div>
+</div>
+</body>
+</html>

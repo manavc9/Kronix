@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — History{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── PERIOD TABS ── */
+.period-tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+.period-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.period-tab:hover { color: var(--text); border-color: var(--text-4); }
+.period-tab.active { color: var(--kronos); background: var(--kronos-dim); border-color: rgba(37,99,235,0.35); }
+
+/* ── SUMMARY CARDS ── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.summary-card-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.summary-card-label { font-size: 11px; color: var(--text-3); }
+.summary-card.c-green  .summary-card-num { color: var(--green); }
+.summary-card.c-yellow .summary-card-num { color: var(--yellow); }
+.summary-card.c-blue   .summary-card-num { color: var(--accent); }
+
+/* ── ACTION BUTTONS ── */
+.act-btn {
+  font-size: 10px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text-2);
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.act-btn:hover { border-color: var(--accent); color: var(--accent); }
+.act-btn.act-undo { border-color: rgba(255,145,0,0.3); color: var(--orange); }
+.act-btn.act-undo:hover { background: rgba(255,145,0,0.08); }
+.action-row { display: flex; gap: 5px; flex-wrap: nowrap; }
+
+/* ── FILTER BAR ── */
+.hist-filter {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+.filter-group { display: flex; flex-direction: column; gap: 5px; }
+.filter-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+.hist-count {
+  margin-left: auto;
+  align-self: flex-end;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .summary-cards { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── PRINT BUTTON ── */
+.print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.print-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── PRINT STYLES ── */
+@media print {
+  /* Hide everything except the report */
+  nav, .page-header .print-btn, .period-tabs, .hist-filter,
+  .loc-tabs, .flash-wrap, .action-row, th:last-child, td:last-child {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 11px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page { padding: 0 !important; max-width: 100% !important; }
+
+  /* Print header */
+  .print-header {
+    display: block !important;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #2563eb;
+  }
+  .print-header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2563eb;
+    margin-bottom: 2px;
+  }
+  .print-header-sub { font-size: 10px; color: #64748b; }
+
+  /* Summary cards as a horizontal strip */
+  .summary-cards {
+    display: flex !important;
+    gap: 0 !important;
+    margin-bottom: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .summary-card {
+    flex: 1;
+    background: #f8fafc !important;
+    border: none !important;
+    border-right: 1px solid #e2e8f0 !important;
+    padding: 10px 14px !important;
+  }
+  .summary-card:last-child { border-right: none !important; }
+  .summary-card-num { font-size: 18px !important; color: #111 !important; }
+  .summary-card.c-green .summary-card-num { color: #059669 !important; }
+  .summary-card.c-blue  .summary-card-num { color: #2563eb !important; }
+  .summary-card.c-yellow .summary-card-num { color: #b45309 !important; }
+
+  /* Table */
+  .table-wrap { overflow: visible !important; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .data-table th {
+    background: #1e293b !important;
+    color: #fff !important;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .data-table td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; color: #111 !important; }
+  .data-table tr:nth-child(even) td { background: #f8fafc; }
+  .badge { border: 1px solid #ccc !important; background: #f1f5f9 !important;
+           color: #334155 !important; padding: 1px 6px !important; border-radius: 3px; }
+  a { color: #111 !important; text-decoration: none; }
+
+  /* Print footer */
+  .print-footer {
+    display: block !important;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 9px;
+    color: #94a3b8;
+  }
+
+  /* Page break handling */
+  tr { page-break-inside: avoid; }
+}
+
+/* Hidden in screen mode, shown in print */
+.print-header, .print-footer { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Print-only header (hidden on screen) -->
+  <div class="print-header">
+    <div class="print-header-title">KRONIX — History Report</div>
+    <div class="print-header-sub">
+      {{ location.name }} &nbsp;·&nbsp;
+      {% for p, label in [('week','This Week'),('month','This Month'),('quarter','This Quarter'),('year','This Year'),('all','All Time')] %}{% if period == p %}{{ label }}{% endif %}{% endfor %}
+      &nbsp;·&nbsp; {{ work_orders | length }} record{{ 's' if work_orders | length != 1 }}
+      &nbsp;·&nbsp; Printed {{ today.strftime('%B %d, %Y') }}
+    </div>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">History</div>
+      <div class="page-sub">Closed work orders — billed, completed, and cancelled</div>
+    </div>
+    <button class="print-btn" onclick="window.print()" type="button">
+      ⎙ Print
+    </button>
+  </div>
+
+  {% if not user.location_id %}
+  <div class="loc-tabs">
+    {% for loc in locations %}
+    <a class="loc-tab {% if loc.id == location.id %}active{% endif %}"
+       href="/history?location_id={{ loc.id }}&period={{ period }}&status={{ status_f }}&search={{ search }}">{{ loc.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Period tabs -->
+  <div class="period-tabs">
+    {% for p, label in [('week','This Week'),('month','This Month'),('quarter','This Quarter'),('year','This Year'),('all','All Time')] %}
+    <a class="period-tab {% if period == p %}active{% endif %}"
+       href="/history?location_id={{ location.id }}&period={{ p }}&status={{ status_f }}&search={{ search }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- Summary cards -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <div class="summary-card-num">{{ history_stats.count }}</div>
+      <div class="summary-card-label">Cars Completed</div>
+    </div>
+    <div class="summary-card c-green">
+      <div class="summary-card-num">${{ '{:,.0f}'.format(history_stats.total_rev) }}</div>
+      <div class="summary-card-label">Total Revenue</div>
+    </div>
+    <div class="summary-card c-blue">
+      <div class="summary-card-num">{{ history_stats.avg_days }}d</div>
+      <div class="summary-card-label">Avg Days on Site</div>
+    </div>
+    <div class="summary-card c-yellow">
+      <div class="summary-card-num">${{ history_stats.avg_rev_hr }}/hr</div>
+      <div class="summary-card-label">Avg Rev / Hour</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" action="/history">
+    <div class="hist-filter">
+      <input type="hidden" name="location_id" value="{{ location.id }}">
+      <input type="hidden" name="period" value="{{ period }}">
+      <div class="filter-group">
+        <div class="filter-label">Search</div>
+        <input class="form-input" type="text" name="search"
+               placeholder="Car ID or customer…" value="{{ search }}"
+               style="width:210px">
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Status</div>
+        <select class="form-select" name="status" style="min-width:160px">
+          <option value="">All statuses</option>
+          {% for s in ['Billed', 'Completed', 'Cancelled'] %}
+          <option value="{{ s }}" {% if status_f == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary btn-sm" type="submit">Filter</button>
+      {% if search or status_f %}
+      <a class="btn btn-ghost btn-sm" href="/history?location_id={{ location.id }}&period={{ period }}">Clear</a>
+      {% endif %}
+      <div class="hist-count">{{ work_orders | length }} result{{ 's' if work_orders | length != 1 }}</div>
+    </div>
+  </form>
+
+  <!-- Results table -->
+  <div class="table-wrap">
+    <table class="data-table" id="history-table">
+      <thead>
+        <tr>
+          <th>Car ID</th>
+          <th>Customer</th>
+          <th>Commodity</th>
+          <th>Purpose</th>
+          <th>Arrived</th>
+          <th>Billed Out</th>
+          <th>Days on Site</th>
+          <th>Revenue</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody">
+        {% for wo in work_orders %}
+        {% set yc = yc_map.get(wo.id) %}
+        <tr>
+          <td><a class="car-id" href="/car/{{ wo.id }}">{{ wo.car.full_id }}</a></td>
+          <td class="strong">{{ wo.car.customer.name if wo.car.customer else '—' }}</td>
+          <td style="color:var(--text-2)">{{ wo.car.commodity or '—' }}</td>
+          <td style="color:var(--text-2)">{{ wo.purpose or '—' }}</td>
+          <td class="mono" style="color:var(--text-2)">
+            {{ wo.date_arrived.strftime('%b %d, %Y') if wo.date_arrived else '—' }}
+          </td>
+          <td class="mono" style="color:var(--text-2)">
+            {{ wo.billed_out.strftime('%b %d, %Y') if wo.billed_out else '—' }}
+          </td>
+          <td>
+            {% if wo.days_on_site is not none %}
+            {% set d = wo.days_on_site %}
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+              color:{% if d > 60 %}var(--red){% elif d >= 30 %}var(--yellow){% else %}var(--green){% endif %}">
+              {{ d }}d
+            </span>
+            {% else %}<span style="color:var(--text-4)">—</span>{% endif %}
+          </td>
+          <td class="mono" style="color:var(--yellow)">
+            {% if wo.estimated_revenue %}${{ '{:,.0f}'.format(wo.estimated_revenue) }}
+            {% else %}<span style="color:var(--text-4)">—</span>{% endif %}
+          </td>
+          <td>
+            {% set color = get_status_color(wo.status) %}
+            <span class="badge badge-{{ color }}">{{ wo.status }}</span>
+          </td>
+          <td>
+            <div class="action-row">
+              <a class="act-btn" href="/car/{{ wo.id }}">Edit Dates</a>
+              {% if yc %}
+              <form method="POST" action="/yard/undo-bill-out/{{ yc.id }}" style="display:inline"
+                    onsubmit="return confirm('Return this car to the active yard? This will reverse the bill out and reopen the work order.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="location_id" value="{{ location.id }}">
+                <button class="act-btn act-undo" type="submit">Undo Bill Out</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" class="empty">No closed work orders for the selected period</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Print-only footer -->
+  <div class="print-footer">
+    Generated by Kronix Rail Operations Intelligence
+    &nbsp;·&nbsp; {{ location.name }}
+    &nbsp;·&nbsp; {{ history_stats.count }} cars &nbsp;·&nbsp;
+    Total Revenue: ${{ '{:,.0f}'.format(history_stats.total_rev) }}
+    &nbsp;·&nbsp; Avg Turnaround: {{ history_stats.avg_days }}d
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Sortable columns (skip Actions column at index 9)
+makeTableSortable('history-table', [0,1,2,3,4,5,6,7,8], 'history-tbody');
+</script>
+{% endblock %}

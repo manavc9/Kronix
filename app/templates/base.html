@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Kronix{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN SYSTEM VARIABLES ── */
+:root {
+  /* ── Kronix brand ── */
+  --kronos:      #2563eb;
+  --kronos-dim:  rgba(37,99,235,0.10);
+  --kronos-glow: rgba(37,99,235,0.18);
+  --ix:          #f59e0b;
+  --ix-dim:      rgba(245,158,11,0.10);
+
+  /* ── Surface scale ── */
+  --bg-primary:    #080a0d;
+  --bg-surface:    #0f1218;
+  --bg-surface2:   #151921;
+  --bg-surface3:   #1a2030;
+  --border-subtle: #1e2535;
+  --border-medium: #263045;
+  --border-strong: #2f3a52;
+
+  /* ── Semantic tokens (accent = kronos, amber = ix) ── */
+  --accent:      var(--kronos);
+  --accent-dim:  var(--kronos-dim);
+  --accent-glow: var(--kronos-glow);
+
+  --green:       #059669;
+  --green-dim:   rgba(5,150,105,0.10);
+  --amber:       var(--ix);
+  --amber-dim:   var(--ix-dim);
+  --red:         #dc2626;
+  --red-dim:     rgba(220,38,38,0.10);
+  --blue:        #2563eb;
+  --blue-dim:    rgba(37,99,235,0.10);
+  --purple:      #7c3aed;
+  --purple-dim:  rgba(124,58,237,0.10);
+  --teal:        #0891b2;
+  --teal-dim:    rgba(8,145,178,0.10);
+
+  --text-primary:   #e8edf5;
+  --text-secondary: #8a95a8;
+  --text-muted:     #4a5568;
+
+  /* ── Backward-compat aliases ── */
+  --bg:         #080a0d;
+  --surface:    #0f1218;
+  --surface-2:  #151921;
+  --surface-3:  #1a2030;
+  --border:     #1e2535;
+  --border-sub: #171e2c;
+  --text:       #e8edf5;
+  --text-2:     #8a95a8;
+  --text-3:     #4a5568;
+  --text-4:     #2f3a52;
+  --yellow:     #f59e0b;   /* → ix/amber */
+  --orange:     #e07830;
+  --radius:     10px;
+  --radius-sm:  5px;
+  --radius-lg:  14px;
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: 'IBM Plex Sans', sans-serif; }
+input, select, textarea { font-family: 'IBM Plex Sans', sans-serif; }
+
+/* ── CUSTOM SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* ─────────────────────────────────────────────
+   NAV
+───────────────────────────────────────────── */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 24px;
+  height: 56px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.5);
+}
+.nav-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  margin-right: 6px;
+  text-decoration: none;
+}
+.nav-logo .logo-kron { color: var(--kronos); }
+.nav-logo .logo-ix   { color: var(--ix); }
+.nav-sep { width: 1px; height: 20px; background: var(--border-medium); margin: 0 6px; flex-shrink: 0; }
+
+.nav-links { display: flex; gap: 2px; flex-wrap: nowrap; overflow: hidden; }
+.nav-link {
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.nav-link:hover { color: var(--text-primary); background: var(--bg-surface3); text-decoration: none; }
+.nav-link.active { color: var(--accent); background: var(--accent-dim); }
+.nav-link.nav-add {
+  color: var(--accent);
+  border: 1px solid rgba(37,99,235,0.25);
+  background: var(--accent-dim);
+}
+.nav-link.nav-add:hover { background: var(--accent-glow); }
+
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Global search */
+#nav-search-wrap { position: relative; }
+#nav-search-wrap form { margin: 0; }
+.nav-search-box {
+  background: var(--bg-surface3);
+  border: 1px solid var(--border-medium);
+  border-radius: 5px;
+  padding: 6px 11px;
+  color: var(--text-primary);
+  font-size: 11px;
+  width: 180px;
+  outline: none;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: border-color 0.15s, width 0.2s, box-shadow 0.15s;
+}
+.nav-search-box::placeholder { color: var(--text-muted); }
+.nav-search-box:focus {
+  border-color: var(--accent);
+  width: 220px;
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+.nav-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 310px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 999;
+  overflow: hidden;
+  display: none;
+}
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-decoration: none;
+  transition: background 0.1s;
+  cursor: pointer;
+}
+.search-result:last-child { border-bottom: none; }
+.search-result:hover { background: var(--accent-dim); text-decoration: none; }
+.search-car-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 90px;
+}
+.search-customer { font-size: 11px; color: var(--text-secondary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-status   { font-size: 9px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+.search-empty    { padding: 12px 14px; font-size: 11px; color: var(--text-muted); text-align: center; }
+
+/* User pill */
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: var(--bg-surface2);
+  border: 1px solid var(--border-medium);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.nav-user-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(5,150,105,0.7);
+  flex-shrink: 0;
+}
+.nav-user-name { color: var(--text-primary); font-weight: 500; }
+.nav-role-pill {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.nav-role-pill.role-scheduler        { background: var(--accent-dim);  color: var(--accent); }
+.nav-role-pill.role-customer-service { background: var(--blue-dim);    color: var(--blue); }
+.nav-role-pill.role-shop-manager     { background: var(--amber-dim);   color: var(--amber); }
+.nav-role-pill.role-admin            { background: var(--purple-dim);  color: var(--purple); }
+
+.nav-logout {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 5px 8px;
+  border-radius: 5px;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.nav-logout:hover { color: var(--red); text-decoration: none; }
+
+/* ─────────────────────────────────────────────
+   FLASH MESSAGES
+───────────────────────────────────────────── */
+.flash-bar {
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+}
+.flash-wrap { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+.flash, .flash-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  border-left: 3px solid;
+  transition: opacity 0.3s, transform 0.3s;
+  position: relative;
+}
+.flash-success, .flash-message.flash-success {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+}
+.flash-warning, .flash-message.flash-warning {
+  background: var(--amber-dim);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.flash-error, .flash-message.flash-error {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+.flash-info, .flash-message.flash-info {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.flash-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.flash-close:hover { opacity: 1; }
+
+/* ─────────────────────────────────────────────
+   PAGE LAYOUT
+───────────────────────────────────────────── */
+.page    { padding: 24px 28px; max-width: 1440px; margin: 0 auto; }
+.page-sm { padding: 24px 28px; max-width: 920px;  margin: 0 auto; }
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.page-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.page-sub, .page-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* ─────────────────────────────────────────────
+   CARDS
+───────────────────────────────────────────── */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+/* Both old (.card-head) and new (.card-header) names work */
+.card-head, .card-header {
+  padding: 12px 18px;
+  background: var(--bg-surface2);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.card-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.card-body { padding: 16px 18px; }
+
+/* ─────────────────────────────────────────────
+   BADGES
+───────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+/* New names */
+.badge-green  { background: var(--green-dim);  color: var(--green); }
+.badge-amber  { background: var(--amber-dim);  color: var(--amber); }
+.badge-red    { background: var(--red-dim);    color: var(--red); }
+.badge-blue   { background: var(--blue-dim);   color: var(--blue); }
+.badge-accent { background: var(--accent-dim); color: var(--accent); }
+.badge-purple { background: var(--purple-dim); color: var(--purple); }
+.badge-teal   { background: var(--teal-dim);   color: var(--teal); }
+.badge-gray   { background: var(--bg-surface3); color: var(--text-secondary); }
+
+/* Backward-compat aliases */
+.badge-yellow { background: var(--amber-dim);  color: var(--amber); }
+.badge-orange { background: var(--amber-dim);  color: var(--amber); }
+
+/* ─────────────────────────────────────────────
+   TABLE WRAP + DATA TABLE
+───────────────────────────────────────────── */
+.table-wrap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: left;
+  padding: 9px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface2);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tbody tr { transition: background 0.1s; }
+.data-table tbody tr:hover td { background: var(--accent-dim); }
+
+/* Car ID link */
+.car-id, a.car-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.car-id:hover { text-decoration: underline; }
+.mono { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+td.strong, .strong { color: var(--text-primary); font-weight: 500; }
+
+/* ─────────────────────────────────────────────
+   FORMS
+───────────────────────────────────────────── */
+.form-grid   { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+.form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
+.form-group  { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.form-group.span2 { grid-column: span 2; }
+.form-group.span3 { grid-column: span 3; }
+.form-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 5px;
+}
+.form-label .req { color: var(--red); }
+.form-input, .form-select, .form-textarea {
+  background: var(--bg-surface3);
+  border: 1px solid var(--border-medium);
+  border-radius: 5px;
+  padding: 8px 11px;
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+.form-input::placeholder { color: var(--text-muted); }
+.form-textarea { resize: vertical; min-height: 72px; }
+.form-select option { background: var(--bg-surface2); color: var(--text-primary); }
+.form-hint { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.form-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 16px 0 8px;
+}
+
+/* ─────────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #1d4ed8; box-shadow: 0 0 12px var(--accent-glow); text-decoration: none; transform: translateY(-1px); }
+.btn-ghost { background: transparent; border: 1px solid var(--border-medium); color: var(--text-secondary); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.btn-success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
+.btn-success:hover { background: rgba(0,214,143,0.18); text-decoration: none; }
+.btn-danger { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+.btn-danger:hover { background: rgba(240,64,96,0.18); text-decoration: none; }
+.btn-sm  { padding: 4px 11px; font-size: 10px; }
+.btn-xs  { padding: 3px 8px;  font-size: 9px; }
+
+/* ─────────────────────────────────────────────
+   PROGRESS BARS
+───────────────────────────────────────────── */
+.progress-track { height: 5px; background: var(--border-subtle); border-radius: 3px; overflow: hidden; }
+.progress-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.progress-fill.green  { background: var(--green); }
+.progress-fill.amber  { background: var(--amber); }
+.progress-fill.red    { background: var(--red); }
+.progress-fill.accent { background: var(--accent); }
+/* Old alias names */
+.progress-fill.low  { background: var(--accent); }
+.progress-fill.mid  { background: var(--amber); }
+.progress-fill.high { background: var(--green); }
+
+/* ─────────────────────────────────────────────
+   SECTION HEADERS
+───────────────────────────────────────────── */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.section-link { font-size: 11px; color: var(--accent); }
+.section-link:hover { text-decoration: underline; }
+
+/* ─────────────────────────────────────────────
+   LOCATION TABS
+───────────────────────────────────────────── */
+.loc-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.loc-tab {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.loc-tab:hover { color: var(--text-primary); border-color: var(--border-strong); text-decoration: none; }
+.loc-tab.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(37,99,235,0.35); }
+
+/* ─────────────────────────────────────────────
+   STAT PILLS (slim strip)
+───────────────────────────────────────────── */
+.stat-strip { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.stat-pill {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 11px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.stat-pill-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+.stat-pill-label { font-size: 11px; color: var(--text-muted); }
+.stat-pill.c-blue   .stat-pill-num { color: var(--accent); }
+.stat-pill.c-green  .stat-pill-num { color: var(--green); }
+.stat-pill.c-yellow .stat-pill-num,
+.stat-pill.c-amber  .stat-pill-num { color: var(--amber); }
+.stat-pill.c-orange .stat-pill-num { color: var(--amber); }
+.stat-pill.c-red    .stat-pill-num { color: var(--red); }
+.stat-pill.c-purple .stat-pill-num { color: var(--purple); }
+.stat-pill.c-teal   .stat-pill-num { color: var(--teal); }
+
+/* ─────────────────────────────────────────────
+   GRIDS
+───────────────────────────────────────────── */
+.two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* ─────────────────────────────────────────────
+   MODAL
+───────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.78);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  width: 500px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+.modal-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ─────────────────────────────────────────────
+   GLOBAL SORTABLE TABLE HEADERS
+───────────────────────────────────────────── */
+.data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.data-table th.sortable:hover { color: var(--accent); }
+.data-table th.sortable::after {
+  content: ' ⇅';
+  font-size: 9px;
+  opacity: 0.35;
+  margin-left: 2px;
+}
+.data-table th.sort-asc::after  { content: ' ↑'; color: var(--accent); opacity: 1; }
+.data-table th.sort-desc::after { content: ' ↓'; color: var(--accent); opacity: 1; }
+
+/* ─────────────────────────────────────────────
+   EMPTY STATE + DIVIDER
+───────────────────────────────────────────── */
+.empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.divider { border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0; }
+
+/* ─────────────────────────────────────────────
+   COLLAPSIBLE (used by car_profile sections)
+───────────────────────────────────────────── */
+.collapsible-body { display: none; }
+.collapsible-body.open { display: block; }
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .two-col, .three-col { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .page, .page-sm { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .form-grid .span3 { grid-column: span 2; }
+}
+@media (max-width: 720px) {
+  .nav-links { display: none; }
+  #nav-search-wrap { display: none; }
+}
+</style>
+{% block extra_head %}{% endblock %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <a class="nav-logo" href="/dashboard">
+    <span class="logo-kron">KRON</span><span class="logo-ix">IX</span>
+  </a>
+  <div class="nav-sep"></div>
+
+  <div class="nav-links">
+    <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">Dashboard</a>
+    <a class="nav-link {% if request.path == '/car-tracking' %}active{% endif %}" href="/car-tracking">Car Tracking</a>
+
+    {% if user.role in ('Scheduler', 'Admin') %}
+    <a class="nav-link {% if request.path == '/schedule' %}active{% endif %}" href="/schedule">Schedule</a>
+    <a class="nav-link {% if request.path == '/cleaning' %}active{% endif %}" href="/cleaning">Cleaning</a>
+    {% endif %}
+
+    {% if user.role in ('Scheduler', 'Admin', 'Shop Manager') %}
+    <a class="nav-link {% if request.path == '/shop-floor' %}active{% endif %}" href="/shop-floor">Shop Floor</a>
+    <a class="nav-link {% if request.path == '/yard' %}active{% endif %}" href="/yard">Yard</a>
+    {% endif %}
+
+    <a class="nav-link {% if request.path == '/history' %}active{% endif %}" href="/history">History</a>
+
+    {% if user.role in ('Scheduler', 'Admin') %}
+    <a class="nav-link {% if request.path == '/reports' %}active{% endif %}" href="/reports">Reports</a>
+    {% endif %}
+
+    {% if user.role in ('Scheduler', 'Admin') %}
+    <a class="nav-link nav-add {% if request.path == '/car/new' %}active{% endif %}" href="/car/new">+ Add Car</a>
+    {% endif %}
+  </div>
+
+  <div class="nav-right">
+    <!-- Global car search -->
+    <div id="nav-search-wrap">
+      <form action="/car-tracking" method="GET">
+        <input type="text" id="nav-search" name="search"
+               class="nav-search-box"
+               placeholder="Search car ID…"
+               autocomplete="off">
+      </form>
+    </div>
+
+    <div class="nav-sep"></div>
+
+    <div class="nav-user">
+      <div class="nav-user-dot"></div>
+      <span class="nav-user-name">{{ user.name }}</span>
+      <span class="nav-role-pill role-{{ user.role | lower | replace(' ', '-') }}">{{ user.role }}</span>
+    </div>
+    <a class="nav-logout" href="/logout">Sign out</a>
+  </div>
+</nav>
+
+<!-- ── CONTENT ── -->
+{% block content %}{% endblock %}
+
+{% block extra_scripts %}{% endblock %}
+
+<script>
+// ── AUTO-DISMISS FLASH MESSAGES ──────────────────────
+document.querySelectorAll('.flash, .flash-message').forEach(function(el) {
+  if (!el.querySelector('.flash-close')) {
+    var btn = document.createElement('button');
+    btn.className = 'flash-close';
+    btn.textContent = '×';
+    btn.setAttribute('type', 'button');
+    btn.addEventListener('click', function() { dismissFlash(el); });
+    el.appendChild(btn);
+  }
+  // Auto-dismiss after 4s
+  setTimeout(function() { dismissFlash(el); }, 4000);
+});
+
+function dismissFlash(el) {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(-6px)';
+  el.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+  setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 370);
+}
+
+// ── GLOBAL NAV SEARCH ────────────────────────────────
+(function() {
+  var navSearch = document.getElementById('nav-search');
+  if (!navSearch) return;
+
+  var searchTimeout;
+  var currentResults = [];
+  var focusIndex = -1;
+
+  // Prevent the form from submitting when dropdown is visible
+  var searchForm = navSearch.closest('form');
+  if (searchForm) {
+    searchForm.addEventListener('submit', function(e) {
+      var dropdown = document.getElementById('nav-search-results');
+      if (dropdown && dropdown.style.display === 'block' && currentResults.length) {
+        e.preventDefault();
+        // Navigate to top result
+        window.location.href = '/car/' + currentResults[0].wo_id;
+      }
+    });
+  }
+
+  navSearch.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    focusIndex = -1;
+    var q = this.value.trim();
+    if (q.length < 2) { hideSearchResults(); return; }
+    searchTimeout = setTimeout(function() {
+      fetch('/api/search-cars?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.json(); })
+        .then(function(results) {
+          currentResults = results;
+          showSearchResults(results);
+        })
+        .catch(function() { hideSearchResults(); });
+    }, 180);
+  });
+
+  navSearch.addEventListener('keydown', function(e) {
+    var dropdown = document.getElementById('nav-search-results');
+    var items = dropdown ? dropdown.querySelectorAll('.search-result') : [];
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusIndex = Math.min(focusIndex + 1, items.length - 1);
+      if (items[focusIndex]) items[focusIndex].focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusIndex = Math.max(focusIndex - 1, -1);
+      if (focusIndex === -1) navSearch.focus();
+      else if (items[focusIndex]) items[focusIndex].focus();
+    } else if (e.key === 'Escape') {
+      hideSearchResults();
+      navSearch.blur();
+    }
+  });
+
+  function showSearchResults(results) {
+    var wrap = document.getElementById('nav-search-wrap');
+    var dropdown = document.getElementById('nav-search-results');
+    if (!dropdown) {
+      dropdown = document.createElement('div');
+      dropdown.id = 'nav-search-results';
+      dropdown.className = 'nav-search-dropdown';
+      wrap.appendChild(dropdown);
+    }
+    if (!results.length) {
+      dropdown.innerHTML = '<div class="search-empty">No cars found</div>';
+    } else {
+      dropdown.innerHTML = results.map(function(r) {
+        return '<a href="/car/' + r.wo_id + '" class="search-result" tabindex="0">'
+          + '<span class="search-car-id">' + r.full_id + '</span>'
+          + '<span class="search-customer">' + r.customer + '</span>'
+          + '<span class="search-status">' + r.status + '</span>'
+          + '</a>';
+      }).join('');
+
+      // Allow ArrowUp from first result back to input
+      dropdown.querySelectorAll('.search-result').forEach(function(item, i) {
+        item.addEventListener('keydown', function(e) {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            var next = dropdown.querySelectorAll('.search-result')[i + 1];
+            if (next) next.focus();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (i === 0) navSearch.focus();
+            else dropdown.querySelectorAll('.search-result')[i - 1].focus();
+          } else if (e.key === 'Escape') {
+            hideSearchResults();
+            navSearch.focus();
+          }
+        });
+      });
+    }
+    dropdown.style.display = 'block';
+  }
+
+  function hideSearchResults() {
+    var d = document.getElementById('nav-search-results');
+    if (d) d.style.display = 'none';
+    currentResults = [];
+    focusIndex = -1;
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#nav-search-wrap')) hideSearchResults();
+  });
+})();
+
+// ── DATE INPUT HINTS (today's date as subtle label hint) ──────
+(function() {
+  var today = new Date();
+  var yyyy  = today.getFullYear();
+  var mm    = String(today.getMonth() + 1).padStart(2, '0');
+  var dd    = String(today.getDate()).padStart(2, '0');
+  var todayStr = yyyy + '-' + mm + '-' + dd;
+
+  document.querySelectorAll('input[type="date"]').forEach(function(inp) {
+    // Ensure placeholder is set for accessibility / validation tools
+    if (!inp.getAttribute('placeholder')) inp.setAttribute('placeholder', 'YYYY-MM-DD');
+
+    // Add subtle hint span below empty fields
+    if (!inp.value) {
+      var hint = document.createElement('span');
+      hint.className = 'date-hint';
+      hint.textContent = 'Today: ' + todayStr;
+      hint.style.cssText = 'display:block;font-size:9px;color:var(--text-4);'
+        + 'font-family:\'IBM Plex Mono\',monospace;margin-top:3px;';
+      if (inp.parentNode) inp.parentNode.appendChild(hint);
+      // Remove hint when user picks a value
+      inp.addEventListener('change', function() {
+        if (this.value && hint.parentNode) hint.parentNode.removeChild(hint);
+      });
+    }
+  });
+})();
+
+// ── DATA-COLLAPSE COLLAPSIBLES ────────────────────────
+document.querySelectorAll('[data-collapse-trigger]').forEach(function(trigger) {
+  trigger.addEventListener('click', function() {
+    var targetId = trigger.getAttribute('data-collapse-trigger');
+    var target = document.getElementById(targetId);
+    if (target) {
+      target.classList.toggle('open');
+      trigger.classList.toggle('expanded');
+    }
+  });
+});
+
+// ── GLOBAL SORTABLE TABLE UTILITY ────────────────────
+// Usage: makeTableSortable('table-id', [colsToSort], 'tbody-id')
+// colsToSort: array of column indices to make sortable (0-based)
+// If colsToSort is null, all columns except the last become sortable.
+function makeTableSortable(tableId, sortableCols, tbodyId) {
+  var table  = document.getElementById(tableId);
+  if (!table) return;
+  var tbody  = tbodyId ? document.getElementById(tbodyId) : table.querySelector('tbody');
+  var ths    = table.querySelectorAll('thead th');
+  var state  = { col: -1, asc: true };
+
+  ths.forEach(function(th, i) {
+    var skip = (sortableCols !== null && sortableCols !== undefined)
+               ? sortableCols.indexOf(i) === -1
+               : i === ths.length - 1; // skip last col by default (Actions)
+    if (skip) return;
+
+    th.classList.add('sortable');
+    th.addEventListener('click', function() {
+      state.asc = (state.col === i) ? !state.asc : true;
+      state.col = i;
+
+      ths.forEach(function(h) { h.classList.remove('sort-asc', 'sort-desc'); });
+      th.classList.add(state.asc ? 'sort-asc' : 'sort-desc');
+
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(function(a, b) {
+        var aCell = a.querySelectorAll('td')[i];
+        var bCell = b.querySelectorAll('td')[i];
+        if (!aCell || !bCell) return 0;
+        var aVal = (aCell.getAttribute('data-sort') || aCell.textContent || '').trim().toLowerCase();
+        var bVal = (bCell.getAttribute('data-sort') || bCell.textContent || '').trim().toLowerCase();
+        var aNum = parseFloat(aVal.replace(/[$,d]/g, ''));
+        var bNum = parseFloat(bVal.replace(/[$,d]/g, ''));
+        if (!isNaN(aNum) && !isNaN(bNum)) return state.asc ? aNum - bNum : bNum - aNum;
+        return state.asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      rows.forEach(function(r) { tbody.appendChild(r); });
+    });
+  });
+}
+</script>
+</body>
+</html>

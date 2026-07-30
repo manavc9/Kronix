@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+{% block title %}Kronix — Reports & Exports{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── PAGE LAYOUT ── */
+.reports-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+/* ── REPORT CARD ── */
+.report-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.15s;
+}
+.report-card:hover {
+  border-color: var(--border-strong);
+}
+
+.report-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.report-card-desc {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.55;
+  margin-top: 4px;
+}
+
+/* ── ROLE BADGE ── */
+.role-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.role-badge.rb-all       { background: var(--surface-3); color: var(--text-3); border: 1px solid var(--border); }
+.role-badge.rb-scheduler { background: var(--kronos-dim); color: var(--kronos); border: 1px solid rgba(37,99,235,0.25); }
+.role-badge.rb-cs        { background: var(--blue-dim);   color: var(--blue);   border: 1px solid rgba(37,99,235,0.2); }
+.role-badge.rb-manager   { background: var(--amber-dim);  color: var(--amber);  border: 1px solid rgba(245,158,11,0.25); }
+
+/* ── FILTERS ── */
+.report-filters {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.filter-col { display: flex; flex-direction: column; gap: 4px; }
+.filter-lbl {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+/* ── DOWNLOAD BUTTONS ── */
+.dl-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  padding: 6px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.dl-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.dl-btn.dl-excel {
+  border-left: 3px solid #16a34a;
+}
+.dl-btn.dl-excel:hover { border-left-color: #16a34a; color: #16a34a; background: rgba(22,163,74,0.06); }
+.dl-btn.dl-pdf {
+  border-left: 3px solid #dc2626;
+}
+.dl-btn.dl-pdf:hover { border-left-color: #dc2626; color: #dc2626; background: rgba(220,38,38,0.06); }
+
+.dl-icon { font-size: 13px; line-height: 1; }
+
+/* ── SELECT INPUTS ── */
+.rpt-select { min-width: 130px; }
+.rpt-month  { width: 100px; }
+.rpt-year   { width: 75px; }
+
+@media (max-width: 860px) {
+  .reports-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Reports &amp; Exports</div>
+      <div class="page-sub">Generate and download reports for any location and time period</div>
+    </div>
+  </div>
+
+  <div class="reports-grid">
+
+    <!-- ══════════════════════════════════════════
+         CARD 1 — Monthly Summary
+    ═══════════════════════════════════════════ -->
+    <div class="report-card">
+      <div class="report-card-top">
+        <div>
+          <div class="report-card-title">Monthly Summary Report</div>
+          <div class="report-card-desc">
+            Completed cars, revenue, and turnaround time
+            by location for the selected month.
+          </div>
+        </div>
+        <span class="role-badge rb-all">All Roles</span>
+      </div>
+
+      <form class="report-filters" id="form-monthly">
+        <div class="filter-col">
+          <div class="filter-lbl">Month</div>
+          <select class="form-select rpt-month" name="month" id="monthly-month">
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}"
+              {% if m == current_month %}selected{% endif %}>
+              {{ ['Jan','Feb','Mar','Apr','May','Jun',
+                  'Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-col">
+          <div class="filter-lbl">Year</div>
+          <select class="form-select rpt-year" name="year" id="monthly-year">
+            {% for y in range(current_year - 2, current_year + 2) %}
+            <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-col">
+          <div class="filter-lbl">Location</div>
+          <select class="form-select rpt-select" name="location_id" id="monthly-loc">
+            <option value="">All Locations</option>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+
+      <div class="dl-buttons">
+        <a class="dl-btn dl-excel" href="#" onclick="dlReport(this,'monthly-summary','excel','form-monthly');return false;">
+          <span class="dl-icon">↓</span> Download Excel
+        </a>
+        <a class="dl-btn dl-pdf" href="#" onclick="dlReport(this,'monthly-summary','pdf','form-monthly');return false;">
+          <span class="dl-icon">↓</span> Download PDF
+        </a>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         CARD 2 — Current WIP
+    ═══════════════════════════════════════════ -->
+    <div class="report-card">
+      <div class="report-card-top">
+        <div>
+          <div class="report-card-title">Current WIP Report</div>
+          <div class="report-card-desc">
+            All active cars with current status, days on site,
+            and projected outbound dates.
+          </div>
+        </div>
+        <span class="role-badge rb-scheduler">Scheduler / CS</span>
+      </div>
+
+      <form class="report-filters" id="form-wip">
+        <div class="filter-col">
+          <div class="filter-lbl">Location</div>
+          <select class="form-select rpt-select" name="location_id">
+            <option value="">All Locations</option>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+
+      <div class="dl-buttons">
+        <a class="dl-btn dl-excel" href="#" onclick="dlReport(this,'wip','excel','form-wip');return false;">
+          <span class="dl-icon">↓</span> Download Excel
+        </a>
+        <a class="dl-btn dl-pdf" href="#" onclick="dlReport(this,'wip','pdf','form-wip');return false;">
+          <span class="dl-icon">↓</span> Download PDF
+        </a>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         CARD 3 — Shop Floor Utilization
+    ═══════════════════════════════════════════ -->
+    <div class="report-card">
+      <div class="report-card-top">
+        <div>
+          <div class="report-card-title">Shop Floor Utilization</div>
+          <div class="report-card-desc">
+            Spot occupancy, hours logged, completion %
+            and technician assignments.
+          </div>
+        </div>
+        <span class="role-badge rb-manager">Scheduler / Manager</span>
+      </div>
+
+      <form class="report-filters" id="form-shop">
+        <div class="filter-col">
+          <div class="filter-lbl">Location</div>
+          <select class="form-select rpt-select" name="location_id">
+            <option value="">All Locations</option>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+
+      <div class="dl-buttons">
+        <a class="dl-btn dl-excel" href="#" onclick="dlReport(this,'shop-utilization','excel','form-shop');return false;">
+          <span class="dl-icon">↓</span> Download Excel
+        </a>
+        <a class="dl-btn dl-pdf" href="#" onclick="dlReport(this,'shop-utilization','pdf','form-shop');return false;">
+          <span class="dl-icon">↓</span> Download PDF
+        </a>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         CARD 4 — Yard Status
+    ═══════════════════════════════════════════ -->
+    <div class="report-card">
+      <div class="report-card-top">
+        <div>
+          <div class="report-card-title">Yard Status Report</div>
+          <div class="report-card-desc">
+            All cars in yard with status, return location,
+            arrival date and days on site.
+          </div>
+        </div>
+        <span class="role-badge rb-all">All Roles</span>
+      </div>
+
+      <form class="report-filters" id="form-yard">
+        <div class="filter-col">
+          <div class="filter-lbl">Location</div>
+          <select class="form-select rpt-select" name="location_id">
+            <option value="">All Locations</option>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+
+      <div class="dl-buttons">
+        <a class="dl-btn dl-excel" href="#" onclick="dlReport(this,'yard-status','excel','form-yard');return false;">
+          <span class="dl-icon">↓</span> Download Excel
+        </a>
+        <a class="dl-btn dl-pdf" href="#" onclick="dlReport(this,'yard-status','pdf','form-yard');return false;">
+          <span class="dl-icon">↓</span> Download PDF
+        </a>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         CARD 5 — Parts & Delays
+    ═══════════════════════════════════════════ -->
+    <div class="report-card">
+      <div class="report-card-top">
+        <div>
+          <div class="report-card-title">Parts &amp; Delays Report</div>
+          <div class="report-card-desc">
+            Cars waiting on parts, missing projected outbound
+            dates, and overdue cars — three sections in one report.
+          </div>
+        </div>
+        <span class="role-badge rb-scheduler">Scheduler</span>
+      </div>
+
+      <form class="report-filters" id="form-parts">
+        <div class="filter-col">
+          <div class="filter-lbl">Location</div>
+          <select class="form-select rpt-select" name="location_id">
+            <option value="">All Locations</option>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+
+      <div class="dl-buttons">
+        <a class="dl-btn dl-excel" href="#" onclick="dlReport(this,'parts-delays','excel','form-parts');return false;">
+          <span class="dl-icon">↓</span> Download Excel
+        </a>
+        <a class="dl-btn dl-pdf" href="#" onclick="dlReport(this,'parts-delays','pdf','form-parts');return false;">
+          <span class="dl-icon">↓</span> Download PDF
+        </a>
+      </div>
+    </div>
+
+  </div><!-- /reports-grid -->
+</div>
+
+<script>
+function dlReport(btn, reportSlug, format, formId) {
+  const form   = document.getElementById(formId);
+  const params = new URLSearchParams(new FormData(form));
+  // Remove empty values to keep URL clean
+  for (const [k, v] of [...params.entries()]) {
+    if (!v) params.delete(k);
+  }
+  const url = `/reports/${reportSlug}/${format}?${params.toString()}`;
+
+  // Brief visual feedback
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="dl-icon">…</span> Preparing…';
+  btn.style.opacity = '0.7';
+  setTimeout(() => {
+    btn.innerHTML = orig;
+    btn.style.opacity = '';
+  }, 2000);
+
+  window.location.href = url;
+}
+</script>
+{% endblock %}
