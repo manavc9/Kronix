@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python run.py)",
+      "Bash(python -c ':*)",
+      "Bash(python -c \"from app import create_app; app = create_app\\(\\); print\\('OK'\\)\")",
+      "Bash(pip install:*)",
+      "Bash(venv/Scripts/pip install:*)",
+      "Bash(FLASK_ENV=development venv/Scripts/python -m pytest tests/ -v)"
+    ]
+  }
+}
